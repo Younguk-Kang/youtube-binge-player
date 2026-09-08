@@ -1,51 +1,59 @@
-# 🎬 YouTube Binge Player (유튜브 정주행 플레이어)
+# 🎬 YouTube Binge Player
 
-> 채널의 1화부터 최신화까지 끊김 없이 차례대로 몰입해서 시청할 수 있는 웹 기반 유튜브 정주행 전용 플레이어입니다.
-
----
-
-## ✨ 핵심 기능 (Key Features)
-
-- 🔄 **정주행 & 최신순(역주행) 무중단 전환**
-  - 재생 중인 비디오가 끊기지 않고 목록과 회차 번호만 즉각 전환됩니다.
-  - 정주행 모드에서는 가장 오래된 영상(1화)부터 순서대로 자동 재생됩니다.
-- 🔒 **회원전용(멤버십) 영상 필터링 토글**
-  - 재생할 수 없는 멤버십 영상을 원클릭으로 목록에서 깔끔하게 제외하거나 다시 포함할 수 있습니다.
-- 🔍 **채널 검색 및 대량 동영상 자동 불러오기**
-  - 유튜브 키워드 검색이나 채널 주소 입력만으로 수백 편의 동영상을 0.5초 만에 목록으로 수집합니다.
-- ⏱️ **초 단위 이어보기 (Resume Playback)**
-  - 브라우저를 닫았다가 다시 열어도 마지막으로 보던 영상과 정확한 초(Seconds) 지점을 자동으로 기억하여 이어봅니다.
-- ✓ **시청 완료 체크 & 자동 다음 영상 (Auto Play Next)**
-  - 영상이 끝나면 자동으로 다음 회차를 연속 재생하며, 완청한 영상은 체크 표시로 기록됩니다.
-- 🖥️ **영상 화면 크기 조절 (일반 화면 / 최대화 모드)**
-  - 영상과 목록을 함께 보는 '일반 화면'과, 목록을 숨기고 영상에만 몰입하는 '최대화 모드'를 지원합니다.
-- ⚡ **극도로 가벼운 서버 자원 소모**
-  - 영상 스트리밍은 유튜브 공식 CDN과 브라우저 간에 직접 이루어지므로 서버 트래픽 부담이 0%입니다.
-  - 외부 pip 패키지 설치 없이 순수 Python 표준 라이브러리만으로 가볍고 안정적으로 동작합니다.
+> A lightweight, web-based YouTube binge-watching player designed for seamless chronological watching from episode 1 to the latest.
 
 ---
 
-## 🚀 로컬 실행 방법 (Local Run)
+## ✨ Key Features
 
-별도의 패키지 설치 없이 Python 3만 설치되어 있으면 바로 실행됩니다:
+- 🔄 **Chronological (Oldest First) & Reverse (Newest First) Modes**
+  - Instant list order toggle without interrupting ongoing video playback.
+  - Automatically plays sequentially from the very first video in binge mode.
+- 🔒 **Membership (Members-Only) Video Filter**
+  - One-click toggle (`[🔒 Exclude Membership]` / `[🔓 Include Membership]`) to filter out inaccessible paid-only videos.
+- 🔍 **Channel Search & Instant Video Scraping**
+  - Search any channel keyword or paste a channel URL to fetch hundreds of videos in less than 0.5s.
+- ⏱️ **Second-Accurate Resume Playback**
+  - Remembers the exact second and video where you left off, even across browser restarts.
+- ✓ **Watched History & Auto Play Next**
+  - Automatically tracks watched episodes with checkmarks and transitions smoothly to the next video upon completion.
+- 🖥️ **Flexible Display Modes (Normal & Theater / Expanded)**
+  - Switch between standard view (video + playlist side-by-side) and theater view (maximized video focus).
+- ⚡ **Zero-Overhead & Ultra-Lightweight Architecture**
+  - Video streaming runs directly between YouTube CDN and the browser (0% server bandwidth consumption).
+  - Built strictly with Python standard libraries — zero external dependencies needed.
+
+---
+
+## 🚀 Quick Start (Local Run)
+
+Requires only **Python 3** (no external pip packages needed):
 
 ```bash
 python server.py
 ```
 
-실행 후 웹 브라우저에서 `http://localhost:54321` 로 접속합니다.
+Then open your browser and navigate to:
+```
+http://localhost:54321
+```
 
 ---
 
-## 🌐 무료 클라우드 배포 (Cloud Deployment)
+## 🌐 1-Click Free Cloud Deployment (e.g. Render.com)
 
-[Render.com](https://render.com) 등 무료 호스팅 플랫폼에 1분 만에 배포할 수 있습니다.
+Easily deploy to free cloud hosting platforms such as [Render.com](https://render.com) in under a minute:
 
-1. 본 저장소를 본인의 GitHub 계정으로 푸시(Push)합니다.
-2. [Render.com](https://render.com)에 로그인 후 **New + > Web Service**를 클릭합니다.
-3. GitHub 저장소를 연결합니다.
-4. 설정값 확인:
+1. Push this repository to your GitHub account.
+2. Sign in to [Render.com](https://render.com) and click **New + > Web Service**.
+3. Select and connect your `youtube-binge-player` GitHub repository.
+4. Verify deployment configuration:
    - **Environment**: `Python`
-   - **Build Command**: 비워두거나 `pip install -r requirements.txt`
+   - **Build Command**: `pip install -r requirements.txt` (or leave empty)
    - **Start Command**: `python server.py`
-5. **Create Web Service**를 누르면 무료 HTTPS 웹 주소(`https://xxx.onrender.com`)가 발급됩니다.
+5. Click **Create Web Service**. Your free HTTPS live URL (`https://<project-name>.onrender.com`) will be up in seconds!
+
+---
+
+## 📄 License
+MIT License. Open source and free to customize.
