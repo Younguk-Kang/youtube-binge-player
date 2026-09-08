@@ -1,0 +1,3593 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>유튜브 채널 정주행 플레이어</title>
+  <style>
+    :root {
+      --bg-color: #0c0c0c;
+      --card-bg: #141414;
+      --card-hover: #1f1f1f;
+      --active-bg: #272727;
+      --active-border: #707070;
+      --text-main: #f0f0f0;
+      --text-muted: #888888;
+      --accent: #2c2c2c;
+      --accent-blue: #d4d4d4;
+      --border-color: #333333;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Clean Integrated Sidebar Header (정리된 상부 메뉴) */
+    .sidebar-header {
+      padding: 9px 12px 8px;
+      background: #141414;
+      border-bottom: 1.5px solid #2f2f2f;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-header-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sidebar-header-row.channel-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sidebar-header .channel-select {
+      flex: 1;
+      min-width: 0;
+      background-color: #1a1a1a;
+      border: 1.5px solid #3c3c3c;
+      color: #fff;
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition: border-color 0.15s, background-color 0.15s;
+    }
+
+    .sidebar-header .channel-select:focus,
+    .sidebar-header .channel-select:hover {
+      border-color: #606060;
+      background-color: #212121;
+    }
+
+    .sidebar-header .btn-icon-subtle {
+      background: #1a1a1a;
+      border: 1.5px solid #3a3a3a;
+      color: #888;
+      padding: 4px 7px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+
+    .sidebar-header .btn-icon-subtle:hover {
+      background: #252525;
+      color: #fff;
+      border-color: #555;
+    }
+
+    .sidebar-header .add-channel-btn {
+      background-color: #1f1f1f;
+      border: 1.5px solid #444444;
+      color: #eee;
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .sidebar-header .add-channel-btn:hover {
+      background-color: #2a2a2a;
+      border-color: #666;
+      color: #fff;
+    }
+
+    .sidebar-header .toggle-sidebar-btn {
+      background: #1a1a1a;
+      border: 1.5px solid #3a3a3a;
+      color: #888;
+      padding: 4px 7px;
+      font-size: 13px;
+      border-radius: 6px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+
+    .sidebar-header .toggle-sidebar-btn:hover {
+      background: #252525;
+      color: #fff;
+      border-color: #555;
+    }
+
+    .sidebar-header-row.mode-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding: 0 2px;
+    }
+
+    .sidebar-header .view-modes-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-header .view-modes-label {
+      font-size: 10.5px;
+      color: #888;
+      font-weight: 500;
+      white-space: nowrap;
+      user-select: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .sidebar-header-row.video-stats-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 6px;
+      font-size: 11px;
+      color: #888;
+      padding: 0 2px;
+      min-height: 18px;
+    }
+
+    .sidebar-header-row.video-stats-row .stats-meta-group,
+    .sidebar-header-row.stats-row .stats-meta-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-size: 11px;
+    }
+
+    .sidebar-header .view-modes {
+      display: flex;
+      background: #181818;
+      border-radius: 6px;
+      padding: 2.5px;
+      border: 1.5px solid #444444;
+      flex-shrink: 0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    }
+
+    .sidebar-header .view-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 2.5px 8px;
+      font-size: 10.5px;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .sidebar-header .view-btn:hover {
+      color: #fff;
+    }
+
+    .sidebar-header .view-btn.active {
+      background: #383838;
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Main Container */
+    .main-container {
+      display: flex;
+      flex: 1;
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Player Section */
+    .player-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background-color: #000;
+      padding: 0;
+      min-width: 320px;
+      overflow: hidden;
+      position: relative;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .video-container {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      background: #000;
+    }
+
+    .video-wrapper {
+      width: 100%;
+      height: 100%;
+      max-height: 100%;
+      max-width: calc(100vh * (16 / 9));
+      aspect-ratio: 16 / 9;
+      background: #000;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.8);
+      cursor: default; /* Keep cursor always normal! */
+    }
+
+    .video-wrapper:fullscreen,
+    .video-wrapper:-webkit-full-screen {
+      max-width: 100vw !important;
+      max-height: 100vh !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+    }
+    .video-wrapper:fullscreen .video-controls-overlay,
+    .video-wrapper:-webkit-full-screen .video-controls-overlay {
+      padding: 50px 26px 22px;
+    }
+
+    /* Screen Maximize (화면 최대화) & Fullscreen Styles */
+    body.mode-max .main-container {
+      height: 100vh !important;
+    }
+
+    body.mode-max .video-wrapper {
+      max-width: calc(100vh * (16 / 9)) !important;
+      max-height: 100vh !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    /* Right Sidebar in mode-max (slides in from right smoothly) */
+    body.mode-max .list-section {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 380px !important;
+      max-width: 85vw !important;
+      height: 100vh !important;
+      z-index: 1002;
+      transform: translateX(100%);
+      transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.32s ease;
+      background-color: rgba(18, 18, 18, 0.96) !important;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-left: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: -10px 0 35px rgba(0, 0, 0, 0.85);
+      pointer-events: none;
+      cursor: default !important;
+    }
+
+    body.mode-max .list-section.revealed {
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+
+    body.mode-max .resizer,
+    body.mode-max .float-list-btn {
+      display: none !important;
+    }
+
+    /* Hover edge triggers for screen maximized mode */
+    .right-edge-trigger {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 28px;
+      height: 100vh;
+      z-index: 999;
+      display: none;
+      cursor: default;
+      pointer-events: auto;
+    }
+
+    body.mode-max .right-edge-trigger {
+      display: block;
+    }
+
+    .video-wrapper iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+      pointer-events: none; /* Mouse interaction is handled by video-click-layer and controls overlay */
+    }
+
+    /* Video Click Layer (Single click play/pause, Double click fullscreen) */
+    .video-click-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 5;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .center-ripple {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.75);
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 32px;
+      opacity: 0;
+      transform: scale(0.6);
+      pointer-events: none;
+      transition: all 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+
+    .center-ripple.active {
+      opacity: 1;
+      transform: scale(1.05);
+    }
+
+    /* Modern On-Screen Controls Overlay */
+    .video-controls-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 40px 18px 16px;
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.5) 65%, transparent 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 10;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(6px);
+      transition: opacity 0.15s ease, transform 0.15s ease, bottom 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: default;
+    }
+
+    /* Active / Hover on videoWrapper */
+    .video-wrapper:hover:not(.idle) .video-controls-overlay,
+    .video-wrapper.controls-open .video-controls-overlay {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    /* Idle / Inactivity on video: Hide both controls AND cursor together! */
+    .video-wrapper.idle,
+    .video-wrapper.idle * {
+      cursor: none !important;
+    }
+    .video-wrapper.idle .video-controls-overlay {
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transform: translateY(6px) !important;
+    }
+
+    /* Progress Bar Scrubber */
+    .progress-track {
+      position: relative;
+      width: 100%;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.25);
+      border-radius: 3px;
+      cursor: pointer;
+      transition: height 0.15s ease;
+    }
+    .progress-track:hover,
+    .progress-track.scrubbing {
+      height: 8px;
+    }
+
+    .progress-buffered {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 3px;
+      width: 0%;
+      pointer-events: none;
+    }
+
+    .progress-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background: #e0e0e0;
+      border-radius: 3px;
+      width: 0%;
+      pointer-events: none;
+    }
+
+    .progress-thumb {
+      position: absolute;
+      top: 50%;
+      left: 0%;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 0 6px rgba(0, 0, 0, 0.85);
+      transform: translate(-50%, -50%) scale(0);
+      transition: transform 0.15s ease;
+      pointer-events: none;
+    }
+    .progress-track:hover .progress-thumb,
+    .progress-track.scrubbing .progress-thumb {
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .progress-time-tooltip {
+      position: absolute;
+      bottom: 14px;
+      left: 0;
+      transform: translateX(-50%);
+      background: rgba(20, 20, 20, 0.9);
+      border: 1px solid #444;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 6px;
+      border-radius: 4px;
+      pointer-events: none;
+      display: none;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 900px) {
+      .video-title-text {
+        max-width: 160px;
+      }
+      #clear-watched-btn {
+        display: none;
+      }
+    }
+    @media (max-width: 720px) {
+      .video-title-text {
+        display: none;
+      }
+      .volume-slider {
+        width: 45px;
+      }
+    }
+    /* Controls Row */
+    .overlay-controls-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .ctrl-group {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .ctrl-left {
+      flex-shrink: 0;
+    }
+
+    .ctrl-center {
+      flex: 1;
+      min-width: 0;
+      padding: 0 8px;
+    }
+
+    .video-title-text {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: block;
+    }
+
+    .ctrl-right {
+      flex-shrink: 0;
+    }
+
+    .ctrl-btn {
+      background: rgba(35, 35, 35, 0.9);
+      border: 1.5px solid rgba(255, 255, 255, 0.24);
+      color: #fff;
+      border-radius: 6px;
+      padding: 5px 9px;
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s ease, border-color 0.15s ease;
+      font-family: inherit;
+    }
+    .ctrl-btn:hover {
+      background: rgba(70, 70, 70, 0.95);
+      border-color: rgba(255, 255, 255, 0.45);
+    }
+    .ctrl-btn.primary {
+      background: #2b2b2b;
+      border-color: #444444;
+      color: #ffffff;
+    }
+    .ctrl-btn.primary:hover {
+      background: #3b3b3b;
+      border-color: #666666;
+    }
+
+    .ctrl-btn.play-btn {
+      font-size: 13px;
+      padding: 5px 12px;
+      background: #e0e0e0;
+      border-color: #e0e0e0;
+      color: #111111;
+      font-weight: 700;
+    }
+    .ctrl-btn.play-btn:hover {
+      background: #ffffff;
+      border-color: #ffffff;
+    }
+
+    .volume-container {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .volume-slider {
+      width: 65px;
+      height: 4px;
+      cursor: pointer;
+      accent-color: #e0e0e0;
+    }
+
+    .time-display {
+      font-size: 11.5px;
+      color: #ddd;
+      font-family: monospace;
+      white-space: nowrap;
+      margin-left: 2px;
+    }
+
+    .ctrl-select {
+      background: rgba(35, 35, 35, 0.9);
+      border: 1.5px solid rgba(255, 255, 255, 0.24);
+      color: #fff;
+      padding: 4px 6px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    /* Toast notification */
+    .toast-msg {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(30, 30, 30, 0.95);
+      border: 1px solid #444;
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+      z-index: 30;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Error notice banner overlay */
+    .player-error-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 15, 15, 0.95);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      text-align: center;
+      gap: 12px;
+      z-index: 25;
+    }
+
+    .player-error-overlay.show {
+      display: flex;
+    }
+
+    /* Header Stats: Channel Subscribers & Current Video Stats */
+    .header-stats-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin-left: 6px;
+      background: #191919;
+      border: 1px solid var(--border-color);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .header-stats-badge.channel-badge {
+      background: #1c1c1c;
+      border-color: #333;
+    }
+
+    .header-stats-badge.current-video-badge {
+      background: #161616;
+      border-color: #383838;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #b0b0b0;
+      letter-spacing: -0.2px;
+    }
+
+    .stat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 500;
+    }
+
+    .stat-pill.sub-pill {
+      color: #e0e0e0;
+      font-weight: 600;
+    }
+
+    .stat-pill.date-pill {
+      color: #999999;
+      font-weight: 500;
+    }
+
+    .stat-pill.view-pill {
+      color: #cccccc;
+      font-weight: 600;
+    }
+
+    .stat-pill.like-pill {
+      color: #cccccc;
+      font-weight: 600;
+    }
+
+    .stat-divider {
+      color: #555;
+      font-size: 11px;
+    }
+
+    .video-item-stat {
+      font-size: 11px;
+      color: #888;
+      margin-left: 6px;
+    }
+
+    /* Monochrome Icons & Emojis (Black & Grey Palette) */
+    .stat-pill,
+    .stat-label,
+    .help-hint,
+    .view-btn,
+    .view-modes-label,
+    .order-btn,
+    .last-watched-tag,
+    .resume-pos-tag,
+    .watched-check,
+    .resume-badge,
+    .resume-btn,
+    .ctrl-btn,
+    .modal-title,
+    .toast-msg,
+    .float-list-btn {
+      filter: grayscale(100%) brightness(0.95);
+    }
+
+    input[type="checkbox"] {
+      accent-color: #888888;
+    }
+
+    .current-video-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #ffffff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    button {
+      background-color: #242424;
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      padding: 6px 11px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s;
+    }
+
+    button:hover {
+      background-color: #333333;
+      border-color: #555;
+    }
+
+    button.primary {
+      background-color: #e0e0e0;
+      color: #111;
+      font-weight: 600;
+      border-color: transparent;
+    }
+
+    button.primary:hover {
+      background-color: #ffffff;
+    }
+
+    .speed-select {
+      background-color: #242424;
+      border: 1px solid var(--border-color);
+      color: #fff;
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--text-muted);
+      user-select: none;
+    }
+
+    /* Resizer */
+    .resizer {
+      width: 6px;
+      cursor: col-resize;
+      background-color: #1a1a1a;
+      transition: background-color 0.2s;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .resizer:hover, .resizer.dragging {
+      background-color: #555555;
+    }
+
+    /* Sidebar */
+    .list-section {
+      width: 330px;
+      min-width: 240px;
+      max-width: 650px;
+      background-color: var(--card-bg);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      flex-shrink: 0;
+      transition: width 0.2s ease;
+    }
+
+    .list-section.hidden {
+      width: 0 !important;
+      min-width: 0 !important;
+      overflow: hidden;
+      border: none;
+    }
+
+    .list-toolbar {
+      padding: 10px 12px;
+      border-bottom: 1.5px solid #2f2f2f;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background-color: #141414;
+    }
+
+    /* Resume Banner */
+    .resume-banner {
+      background: #1a1a1a;
+      border: 1.5px solid #404040;
+      border-radius: 6px;
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .resume-info {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      overflow: hidden;
+    }
+
+    .resume-badge {
+      background: #2b2b2b;
+      color: #e0e0e0;
+      border: 1px solid #444444;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 5px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .resume-text {
+      color: #cccccc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .resume-btn {
+      background: #e0e0e0;
+      color: #111111;
+      border: none;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+
+    .resume-btn:hover {
+      background: #ffffff;
+    }
+
+    .search-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+
+    .search-wrap .search-icon {
+      position: absolute;
+      left: 9px;
+      font-size: 11px;
+      color: #777;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .search-input {
+      width: 100%;
+      background-color: #1a1a1a;
+      border: 1.5px solid #3c3c3c;
+      color: #fff;
+      padding: 6px 48px 6px 26px;
+      border-radius: 6px;
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.15s, background-color 0.15s;
+    }
+
+    .search-input:focus {
+      border-color: #606060;
+      background-color: #202020;
+    }
+
+    .search-count-badge {
+      position: absolute;
+      right: 7px;
+      font-size: 10px;
+      color: #777;
+      font-weight: 600;
+      background: #111;
+      padding: 1px 5px;
+      border-radius: 4px;
+      border: 1px solid #383838;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .toolbar-right-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .order-toggle {
+      display: flex;
+      background: #181818;
+      border-radius: 6px;
+      padding: 2.5px;
+      border: 1.5px solid #424242;
+      white-space: nowrap;
+      flex-shrink: 0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    }
+
+    .order-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 2.5px 8px;
+      font-size: 10.5px;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+
+    .order-btn:hover {
+      color: #fff;
+    }
+
+    .order-btn.active {
+      background: #383838;
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    }
+
+    .toolbar-right-group .order-btn {
+      background: #1a1a1a;
+      border: 1.5px solid #3c3c3c;
+      color: #bbb;
+      padding: 3px 8px;
+      border-radius: 5px;
+    }
+
+    .toolbar-right-group .order-btn:hover {
+      background: #252525;
+      border-color: #555;
+      color: #fff;
+    }
+
+    .toolbar-right-group .order-btn.active {
+      background: #2b1f14;
+      border-color: #f59e0b;
+      color: #fbbf24;
+      font-weight: 600;
+    }
+
+    .members-badge {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(245, 158, 11, 0.16);
+      border: 1px solid rgba(245, 158, 11, 0.45);
+      color: #fbbf24;
+      font-size: 9.5px;
+      font-weight: 600;
+      padding: 0 4px;
+      border-radius: 3px;
+      white-space: nowrap;
+      height: 16px;
+      line-height: 16px;
+    }
+
+    /* Video List */
+    .video-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px;
+      padding-bottom: 75vh; /* Allows even the last videos to scroll all the way to the top */
+    }
+
+    .video-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.12s;
+      border: 1px solid transparent;
+      margin-bottom: 3px;
+      position: relative;
+      content-visibility: auto;
+      contain-intrinsic-size: 0 54px;
+    }
+
+    .video-item:hover {
+      background-color: var(--card-hover);
+    }
+
+    .video-item.active {
+      background-color: var(--active-bg);
+      border-color: var(--active-border);
+    }
+
+    .video-num {
+      font-size: 13px;
+      font-weight: 700;
+      min-width: 32px;
+      color: var(--text-muted);
+      padding-top: 1px;
+    }
+
+    .video-item.active .video-num {
+      color: #ffffff;
+    }
+
+    .video-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .video-title {
+      font-size: 12.5px;
+      line-height: 1.35;
+      color: var(--text-main);
+      word-break: keep-all;
+    }
+
+    .video-item.active .video-title {
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .video-meta {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap !important;
+      flex-wrap: nowrap !important;
+      overflow: hidden;
+      margin-top: 3px;
+    }
+
+    .duration-badge {
+      background: #242424;
+      color: #aaa;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 500;
+      flex-shrink: 0;
+      white-space: nowrap;
+      line-height: 1.3;
+    }
+
+    .last-watched-tag {
+      background: #2c2c2c;
+      color: #f0f0f0;
+      border: 1px solid #4a4a4a;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      flex-shrink: 0;
+      white-space: nowrap;
+      display: none;
+      align-items: center;
+      line-height: 1.3;
+    }
+
+    .video-item.is-last-watched .last-watched-tag {
+      display: inline-flex;
+    }
+
+    .resume-pos-tag {
+      background: #222222;
+      color: #aaaaaa;
+      border: 1px solid #383838;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      flex-shrink: 0;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      line-height: 1.3;
+    }
+
+    .watched-check {
+      background: #1c1c1c;
+      border: 1px solid #333333;
+      color: #777777;
+      padding: 0 4px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      flex-shrink: 0;
+      white-space: nowrap;
+      display: none;
+      align-items: center;
+      line-height: 1.3;
+    }
+
+    .video-item.watched .watched-check {
+      display: inline-flex;
+    }
+
+    .video-item.watched .video-title {
+      opacity: 0.65;
+    }
+
+    /* Floating reopen button */
+    .float-list-btn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 15;
+      background: rgba(30, 30, 30, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid #444;
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      cursor: pointer;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    .float-list-btn:hover {
+      background: rgba(50, 50, 50, 0.95);
+    }
+
+    .list-section.hidden ~ .float-list-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Modal for Adding Channel */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+    }
+
+    .modal-box {
+      background: #181818;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 540px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 22px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.85);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #f0f0f0;
+    }
+
+    .modal-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .modal-search-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .modal-search-row .modal-input {
+      flex: 1;
+      background: #111;
+      border: 1px solid var(--border-color);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .modal-search-row .modal-input:focus {
+      border-color: #888;
+    }
+
+    .modal-search-btn {
+      padding: 10px 16px;
+      background: #252525;
+      color: #ddd;
+      border: 1px solid #383838;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    .modal-search-btn:hover {
+      background: #353535;
+      border-color: #555;
+      color: #fff;
+    }
+
+    .channel-results-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 350px;
+      overflow-y: auto;
+      padding-right: 4px;
+      margin-top: 4px;
+    }
+
+    .channel-results-container::-webkit-scrollbar {
+      width: 6px;
+    }
+    .channel-results-container::-webkit-scrollbar-track {
+      background: #121212;
+      border-radius: 3px;
+    }
+    .channel-results-container::-webkit-scrollbar-thumb {
+      background: #333;
+      border-radius: 3px;
+    }
+    .channel-results-container::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+
+    .channel-result-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: #1f1f1f;
+      border: 1px solid #2d2d2d;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    }
+
+    .channel-result-card:hover {
+      background: #2a2a2a;
+      border-color: #484848;
+      transform: translateY(-1px);
+    }
+
+    .channel-result-thumb {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #222;
+      flex-shrink: 0;
+      border: 1px solid #333;
+    }
+
+    .channel-result-info {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 0;
+      gap: 3px;
+    }
+
+    .channel-result-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #eee;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .channel-result-meta {
+      font-size: 12px;
+      color: #888;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .channel-result-btn {
+      padding: 6px 12px;
+      background: #2b2b2b;
+      border: 1px solid #3a3a3a;
+      color: #ccc;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      flex-shrink: 0;
+      pointer-events: none;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .channel-result-card:hover .channel-result-btn {
+      background: #e0e0e0;
+      color: #111;
+      border-color: #e0e0e0;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .status-msg {
+      font-size: 12px;
+      padding: 2px 0;
+      color: #888;
+    }
+    .status-msg.error { color: #ff6666; }
+    .status-msg.loading { color: #aaa; }
+    .status-msg.success { color: #66ff88; }
+
+    /* Responsive & Polish */
+    @media (max-width: 768px) {
+      .main-container {
+        flex-direction: column !important;
+      }
+      .resizer {
+        display: none !important;
+      }
+      .list-section {
+        width: 100% !important;
+        height: 45vh !important;
+        border-left: none !important;
+        border-top: 1px solid var(--border-color);
+      }
+      .header-stats-badge {
+        font-size: 11px;
+        padding: 3px 6px;
+      }
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="main-container" id="main-box">
+    <!-- Video Player Section -->
+    <main class="player-section">
+      <div class="video-container">
+        <div class="video-wrapper" id="video-wrapper">
+          <!-- Toast Message (Placed inside video-wrapper so it displays in fullscreen) -->
+          <div class="toast-msg" id="toast-msg"></div>
+          <iframe id="yt-iframe"
+                  src="https://www.youtube-nocookie.com/embed/?enablejsapi=1&controls=0&rel=0&iv_load_policy=3&modestbranding=1"
+                  title="YouTube video player"
+                  frameborder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerpolicy="strict-origin-when-cross-origin"
+                  allowfullscreen>
+          </iframe>
+
+          <!-- Transparent Click Layer for Single-Click Play/Pause & Double-Click Fullscreen -->
+          <div class="video-click-layer" id="video-click-layer">
+            <div class="center-ripple" id="center-ripple">▶</div>
+          </div>
+
+          <!-- Modern On-Screen Controls Overlay (Instant hide on mouseleave, 0s delay) -->
+          <div class="video-controls-overlay" id="video-controls-overlay">
+            <!-- Progress Bar Scrubber -->
+            <div class="progress-track" id="progress-track" title="클릭/드래그하여 원하는 구간으로 이동">
+              <div class="progress-buffered" id="progress-buffered"></div>
+              <div class="progress-fill" id="progress-fill"></div>
+              <div class="progress-thumb" id="progress-thumb"></div>
+              <div class="progress-time-tooltip" id="progress-tooltip">00:00</div>
+            </div>
+
+            <!-- Controls Row -->
+            <div class="overlay-controls-row">
+              <div class="ctrl-group ctrl-left">
+                <button id="play-pause-btn" class="ctrl-btn play-btn" title="재생/일시정지 (단축키: Space / K)">▶</button>
+                <button id="prev-btn" class="ctrl-btn" title="이전 영상 (Shift+Left)">⏮</button>
+                <button id="next-btn" class="ctrl-btn primary" title="다음 영상 (Shift+Right)">⏭</button>
+
+                <div class="volume-container" title="음량 조절 (단축키: M 음소거, ↑/↓ 볼륨)">
+                  <button id="mute-btn" class="ctrl-btn" style="padding:4px 7px;">🔊</button>
+                  <input type="range" id="volume-slider" min="0" max="100" value="100" class="volume-slider">
+                </div>
+
+                <span id="time-display" class="time-display">00:00 / 00:00</span>
+              </div>
+
+              <div class="ctrl-group ctrl-center">
+                <span class="video-title-text" id="current-title">채널을 추가해 주세요</span>
+              </div>
+
+              <div class="ctrl-group ctrl-right">
+                <!-- Video Quality Selector -->
+                <select id="quality-select" class="ctrl-select" title="화질 조절 (1080p, 720p, 자동 등)">
+                  <option value="auto" selected>화질: 자동</option>
+                  <option value="hd1080">1080p HD</option>
+                  <option value="hd720">720p HD</option>
+                  <option value="large">480p</option>
+                  <option value="medium">360p</option>
+                </select>
+
+                <!-- Playback speed -->
+                <select id="speed-select" class="ctrl-select" title="재생 속도 조절">
+                  <option value="0.75">0.75x</option>
+                  <option value="1" selected>1.0x</option>
+                  <option value="1.25">1.25x</option>
+                  <option value="1.5">1.5x</option>
+                  <option value="1.75">1.75x</option>
+                  <option value="2">2.0x</option>
+                </select>
+
+                <button id="toggle-watched-btn" class="ctrl-btn" title="시청 완료 체크">✓ 완료</button>
+                <button id="clear-watched-btn" class="ctrl-btn subtle-btn" title="모든 시청 완료(✓) 기록 초기화" style="color:#888; font-size:11px;">초기화</button>
+
+                <label class="toggle-label" title="영상 종료 시 자동으로 다음 영상 재생" style="margin-left: 2px;">
+                  <input type="checkbox" id="auto-play-next" checked>
+                  자동 다음
+                </label>
+
+                <button id="fullscreen-btn" class="ctrl-btn" title="전체화면 (F)">⛶</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Error notice banner -->
+          <div class="player-error-overlay" id="player-error-overlay">
+            <h3 style="font-size:15px; color:#e0e0e0;">⚠️ 이 영상은 외부 재생이 제한되어 있습니다.</h3>
+            <p style="font-size:12px; color:#aaa; max-width:400px;">채널 소유자의 설정으로 인해 유튜브 사이트에서만 재생이 허용된 영상입니다.</p>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+              <a id="error-yt-link" href="#" target="_blank" rel="noopener" style="background:#2b2b2b; border:1px solid #444; color:#fff; padding:6px 14px; border-radius:6px; font-size:12px; text-decoration:none; font-weight:600;">유튜브에서 직접 보기 ↗</a>
+              <button id="error-skip-btn" class="primary" style="padding:6px 14px; font-size:12px;">다음 영상으로 넘어가기 ⏭</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Resizer -->
+    <div class="resizer" id="resizer" title="마우스로 끌어서 크기 조절"></div>
+
+    <!-- Video List Sidebar -->
+    <aside class="list-section" id="sidebar">
+      <!-- Clean Integrated Sidebar Header -->
+      <div class="sidebar-header" id="sidebar-header">
+        <!-- Row 1: Channel Dropdown, Add, Delete, Close -->
+        <div class="sidebar-header-row channel-row">
+          <select id="channel-dropdown" class="channel-select" title="채널 변경">
+            <!-- Populated by JS -->
+          </select>
+          <button id="add-channel-btn" class="add-channel-btn" title="새로운 채널 추가하기">+ 채널</button>
+          <button id="delete-channel-btn" class="btn-icon-subtle" title="현재 선택된 채널 삭제">✕</button>
+          <button id="toggle-sidebar-btn" class="toggle-sidebar-btn" title="목록 접기/닫기 (단축키: T)">◫</button>
+        </div>
+
+        <!-- Row 2: Channel Subscribers & View Modes -->
+        <div class="sidebar-header-row mode-row">
+          <span class="stat-pill sub-pill" id="stat-subscribers">👥 채널 없음</span>
+          <div class="view-modes-group">
+            <span class="view-modes-label" title="영상 화면 크기 조절 (일반 화면 / 최대화)">🖥️ 영상크기</span>
+            <div class="view-modes" title="영상 화면 크기 조절 (일반 화면 / 최대화)">
+              <button id="mode-large" class="view-btn active" title="일반 화면: 영상과 목록 분할">일반</button>
+              <button id="mode-max" class="view-btn" title="최대화 화면: 목록 숨기고 영상 최대화">최대화</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 3: Current Video Stats (Views & Upload Date) -->
+        <div class="sidebar-header-row video-stats-row">
+          <div class="stats-meta-group" id="header-stats">
+            <span class="stat-pill view-pill" id="stat-views" style="display:none;">👁️ -</span>
+            <span class="stat-divider" id="stat-main-divider" style="display:none;">·</span>
+            <span class="stat-pill date-pill" id="stat-upload-date" style="display:none;">📅 -</span>
+            <span class="stat-divider" id="stat-likes-divider" style="display:none;">·</span>
+            <span class="stat-pill like-pill" id="stat-likes" style="display:none;">👍</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="list-toolbar">
+        <!-- Resume Banner -->
+        <div class="resume-banner" id="resume-banner" style="display: none;">
+          <div class="resume-info">
+            <span class="resume-badge">이어보기</span>
+            <span class="resume-text" id="resume-text">마지막 시청: 1번</span>
+          </div>
+          <button class="resume-btn" id="resume-btn">▶ 재생</button>
+        </div>
+
+        <!-- Search Bar with Integrated Count -->
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-box" class="search-input" placeholder="영상 검색 (ESC로 초기화)...">
+          <span id="list-count" class="search-count-badge">0개</span>
+        </div>
+        
+        <!-- Filter & Quick Action Buttons -->
+        <div class="toolbar-actions">
+          <div class="order-toggle">
+            <button id="order-desc" class="order-btn" title="최신 순">최신순</button>
+            <button id="order-asc" class="order-btn" title="오래된 순(정주행 추천)">정주행</button>
+          </div>
+          <div class="toolbar-right-group">
+            <button id="filter-membership-btn" class="order-btn" title="회원전용(멤버십) 영상 제외/포함 토글">🔒 멤버십제외</button>
+            <button id="scroll-to-current-btn" class="order-btn" title="현재 재생 중인 영상으로 이동">📍 현재영상</button>
+            <button id="sync-latest-btn" class="order-btn" title="이 채널의 최신 업로드 영상 동기화">🔄 최신</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="video-list" id="video-list">
+        <!-- Rendered efficiently with DocumentFragment by JS -->
+      </div>
+    </aside>
+
+    <!-- Floating Reopen Button -->
+    <button class="float-list-btn" id="open-sidebar-float">☰ 목록 보기</button>
+  </div>
+
+  <!-- Hover edge trigger for screen maximized mode -->
+  <div class="right-edge-trigger" id="right-edge-trigger" title="마우스를 대면 영상 목록이 열립니다"></div>
+
+  <!-- Channel Add Modal -->
+  <div class="modal-overlay" id="channel-modal">
+    <div class="modal-box">
+      <div class="modal-title">📺 보고 싶은 채널 추가 / 검색</div>
+      <div class="modal-desc">
+        유튜브 채널 이름(예: <code>침착맨</code>, <code>슈카월드</code>, <code>빠니보틀</code>) 또는 유튜브 URL을 입력 후 검색해 보세요.
+      </div>
+      <div class="modal-search-row">
+        <input type="text" id="channel-url-input" class="modal-input" placeholder="채널 이름, @아이디 또는 링크 입력" autocomplete="off">
+        <button id="modal-search-btn" class="modal-search-btn">🔍 검색</button>
+      </div>
+      <div id="modal-status" class="status-msg"></div>
+      <div id="channel-search-results" class="channel-results-container" style="display: none;"></div>
+      <div class="modal-actions">
+        <button id="modal-cancel-btn">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- YouTube IFrame API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+
+  <script>
+    // Clean initial state: no hardcoded default channels
+    if (!localStorage.getItem("binge_channels_clean_v2")) {
+      localStorage.removeItem("binge_channels");
+      localStorage.removeItem("binge_current_channel_id");
+      localStorage.setItem("binge_channels_clean_v2", "true");
+    }
+
+    let channels = [];
+    try {
+      channels = JSON.parse(localStorage.getItem("binge_channels") || "[]");
+    } catch(e) {
+      channels = [];
+    }
+    if (!Array.isArray(channels)) {
+      channels = [];
+    }
+    channels = channels.filter(ch => ch && (ch.id || ch.channelId));
+
+    // Normalize and deduplicate channels
+    const seenInitChannels = new Map();
+    channels.forEach(ch => {
+      ch.id = ch.id || ch.channelId;
+      ch.name = ch.name || ch.channelName || "채널";
+      if (ch.id) {
+        if (!seenInitChannels.has(ch.id) || (ch.videos && ch.videos.length > (seenInitChannels.get(ch.id).videos || []).length)) {
+          seenInitChannels.set(ch.id, ch);
+        }
+      }
+    });
+    channels = Array.from(seenInitChannels.values());
+
+    // Last selected channel & order preference
+    const savedChannelId = localStorage.getItem("binge_current_channel_id");
+    let currentChannel = (savedChannelId && channels.find(c => (c.id || c.channelId) === savedChannelId)) || (channels.length > 0 ? channels[0] : null);
+    if (currentChannel && (currentChannel.id || currentChannel.channelId)) {
+      try { localStorage.setItem("binge_current_channel_id", currentChannel.id || currentChannel.channelId); } catch(e) {}
+    }
+    let isAscending = localStorage.getItem("binge_sort_asc") !== "false";
+    let isHideMembersOnly = localStorage.getItem("binge_hide_members") === "true";
+
+    function isMembersOnlyVideo(video) {
+      if (!video) return false;
+      if (video.isMembersOnly === true) return true;
+      const t = (video.title || "").toLowerCase();
+      const kwList = [
+        "[멤버십", "[맴버십", "(멤버십", "(맴버십",
+        "멤버십", "맴버십",
+        "[회원전용", "(회원전용", "[회원 전용", "(회원 전용",
+        "멤버십 전용", "맴버십 전용", "회원 전용", "회원전용",
+        "members only", "member-only"
+      ];
+      return kwList.some(kw => t.includes(kw));
+    }
+
+    function updateMembershipFilterButton() {
+      const btn = document.getElementById("filter-membership-btn");
+      if (!btn) return;
+      if (isHideMembersOnly) {
+        btn.classList.add("active");
+        btn.innerText = "🔒 멤버십제외";
+        btn.title = "회원전용(멤버십) 영상이 목록에서 제외된 상태입니다 (클릭 시 포함)";
+      } else {
+        btn.classList.remove("active");
+        btn.innerText = "🔓 멤버십포함";
+        btn.title = "모든 영상(회원전용 포함)이 표시 중입니다 (클릭 시 회원전용 제외)";
+      }
+    }
+
+    let currentIndex = 0;
+    let currentPlayingVideoId = null;
+    let displayList = [];
+    let player = null;
+    let isPlayerReady = false;
+    let pendingVideoId = null;
+    let watchedSet = new Set();
+    try {
+      const savedW = localStorage.getItem("watched_videos");
+      if (savedW) watchedSet = new Set(JSON.parse(savedW));
+    } catch(e) {
+      watchedSet = new Set();
+    }
+
+    const sidebar = document.getElementById("sidebar");
+    const mainBox = document.getElementById("main-box");
+    const resizer = document.getElementById("resizer");
+    const currentTitleEl = document.getElementById("current-title");
+    const iframeEl = document.getElementById("yt-iframe");
+    const channelDropdown = document.getElementById("channel-dropdown");
+    const deleteChannelBtn = document.getElementById("delete-channel-btn");
+    const speedSelect = document.getElementById("speed-select");
+    const resumeBanner = document.getElementById("resume-banner");
+    const resumeText = document.getElementById("resume-text");
+    const resumeBtn = document.getElementById("resume-btn");
+    const orderDescBtn = document.getElementById("order-desc");
+    const orderAscBtn = document.getElementById("order-asc");
+    const errorOverlay = document.getElementById("player-error-overlay");
+    const errorYtLink = document.getElementById("error-yt-link");
+    const errorSkipBtn = document.getElementById("error-skip-btn");
+    const toastMsg = document.getElementById("toast-msg");
+
+    function showToast(msg, duration = 2500) {
+      toastMsg.innerText = msg;
+      toastMsg.style.display = "flex";
+      clearTimeout(toastMsg._timer);
+      toastMsg._timer = setTimeout(() => {
+        toastMsg.style.display = "none";
+      }, duration);
+    }
+
+    function saveWatched() {
+      localStorage.setItem("watched_videos", JSON.stringify(Array.from(watchedSet)));
+    }
+
+    function saveChannels() {
+      localStorage.setItem("binge_channels", JSON.stringify(channels));
+      if (currentChannel && currentChannel.id) {
+        localStorage.setItem("binge_current_channel_id", currentChannel.id);
+      }
+      if (window.location.protocol.startsWith("http")) {
+        fetch("/api/channels", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            channels: channels,
+            activeChannelId: currentChannel ? currentChannel.id : ""
+          })
+        }).catch(e => console.warn("Failed to sync channels to server:", e));
+      }
+    }
+
+    function updateOrderButtons() {
+      if (isAscending) {
+        orderAscBtn.classList.add("active");
+        orderDescBtn.classList.remove("active");
+      } else {
+        orderDescBtn.classList.add("active");
+        orderAscBtn.classList.remove("active");
+      }
+    }
+
+    // Time Formatter
+    function formatTime(sec) {
+      if (isNaN(sec) || sec < 0) return "00:00";
+      sec = Math.floor(sec);
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      if (m >= 60) {
+        const h = Math.floor(m / 60);
+        const remM = m % 60;
+        return `${h}:${remM < 10 ? '0' : ''}${remM}:${s < 10 ? '0' : ''}${s}`;
+      }
+      return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    // Video Playback Position Storage & In-Memory Cache
+    const posCache = new Map();
+
+    function getVideoPosition(videoId) {
+      if (!videoId) return 0;
+      if (posCache.has(videoId)) {
+        return posCache.get(videoId);
+      }
+      try {
+        const val = localStorage.getItem("yt_pos_" + videoId);
+        const parsed = val ? parseFloat(val) : 0;
+        posCache.set(videoId, parsed);
+        return parsed;
+      } catch (e) {
+        return 0;
+      }
+    }
+
+    function saveVideoPosition(videoId, seconds) {
+      if (!videoId || seconds < 3) return;
+      posCache.set(videoId, seconds);
+      try {
+        localStorage.setItem("yt_pos_" + videoId, seconds);
+      } catch (e) {}
+    }
+
+    function clearVideoPosition(videoId) {
+      if (!videoId) return;
+      posCache.delete(videoId);
+      try {
+        localStorage.removeItem("yt_pos_" + videoId);
+      } catch (e) {}
+    }
+
+    // Save last watched info for the current channel (including playback position)
+    function saveLastWatchedInfo(channelId, videoId, displayNumber, title, currentTime = 0) {
+      const info = {
+        channelId: channelId,
+        videoId: videoId,
+        displayNumber: displayNumber,
+        title: title,
+        currentTime: currentTime,
+        timestamp: Date.now()
+      };
+      localStorage.setItem("last_watched_" + channelId, JSON.stringify(info));
+      updateResumeBanner();
+    }
+
+    function getLastWatchedInfo(channelId) {
+      const data = localStorage.getItem("last_watched_" + channelId);
+      if (!data) return null;
+      try {
+        return JSON.parse(data);
+      } catch(e) {
+        return null;
+      }
+    }
+
+    function updateResumeBanner() {
+      if (!currentChannel || !currentChannel.id) {
+        resumeBanner.style.display = "none";
+        return;
+      }
+      const info = getLastWatchedInfo(currentChannel.id);
+      if (info && info.videoId) {
+        const targetIndex = displayList.findIndex(v => v.id === info.videoId);
+        if (targetIndex >= 0) {
+          const video = displayList[targetIndex];
+          const currentNum = isAscending ? (currentChannel.videos.length - video.originalIndex + 1) : video.originalIndex;
+          const savedPos = getVideoPosition(video.id);
+          resumeBanner.style.display = "flex";
+          if (savedPos > 5) {
+            resumeText.innerText = `마지막 시청: ${currentNum}번 (${formatTime(savedPos)} 이어보기)`;
+          } else {
+            resumeText.innerText = `마지막 시청: ${currentNum}번 (${video.title})`;
+          }
+          resumeBtn.onclick = () => playVideoByIndex(targetIndex);
+          return;
+        }
+      }
+      resumeBanner.style.display = "none";
+    }
+
+    // Render Channel Dropdown
+    function updateChannelDropdown(forceRebuild = false) {
+      const currentId = currentChannel ? (currentChannel.id || currentChannel.channelId) : "";
+      const expectedOptionCount = channels.length === 0 ? 1 : channels.length;
+      const needsRebuild = forceRebuild || channelDropdown.options.length !== expectedOptionCount;
+      if (needsRebuild) {
+        channelDropdown.innerHTML = "";
+        if (channels.length === 0) {
+          const opt = document.createElement("option");
+          opt.value = "";
+          opt.innerText = "등록된 채널 없음 (+ 채널 추가)";
+          channelDropdown.appendChild(opt);
+        } else {
+          channels.forEach((ch, idx) => {
+            const opt = document.createElement("option");
+            const cid = ch.id || ch.channelId || idx;
+            opt.value = cid;
+            opt.innerText = (ch.name || ch.channelName || "채널") + ` (${ch.videos ? ch.videos.length : 0}개)`;
+            if (cid === currentId) {
+              opt.selected = true;
+            }
+            channelDropdown.appendChild(opt);
+          });
+        }
+      }
+      if (currentId) {
+        channelDropdown.value = currentId;
+      }
+
+      deleteChannelBtn.style.display = channels.length > 1 ? "inline-flex" : "none";
+
+      const statSub = document.getElementById("stat-subscribers");
+      if (statSub) {
+        if (currentChannel) {
+          const cName = currentChannel.name || currentChannel.channelName || "채널";
+          statSub.innerText = currentChannel.subscribers ? `👥 ${currentChannel.subscribers}` : `👥 ${cName}`;
+        } else {
+          statSub.innerText = "👥 채널 없음";
+        }
+      }
+    }
+
+    deleteChannelBtn.addEventListener("click", () => {
+      if (channels.length <= 1 || !currentChannel) return;
+      if (confirm(`'${currentChannel.name}' 채널을 목록에서 삭제하시겠습니까?`)) {
+        channels = channels.filter(c => (c.id || c.channelId) !== (currentChannel.id || currentChannel.channelId));
+        saveChannels();
+        updateChannelDropdown(true);
+        switchChannel(channels[0] || null);
+        showToast("채널이 삭제되었습니다.");
+      }
+    });
+
+    channelDropdown.addEventListener("change", (e) => {
+      const targetVal = e.target.value;
+      if (!targetVal) return;
+      const selected = channels.find(c => (c.id || c.channelId || "") === targetVal) || channels[parseInt(targetVal, 10)];
+      if (selected) {
+        switchChannel(selected);
+      }
+    });
+
+    function switchChannel(channel) {
+      if (!channel) {
+        currentChannel = null;
+        currentIndex = 0;
+        prepareList(true);
+        updateChannelDropdown(false);
+        updateResumeBanner();
+        return;
+      }
+      if (typeof saveCurrentPlayingPosition === "function") {
+        saveCurrentPlayingPosition();
+      }
+      currentPlayingVideoId = null;
+
+      currentChannel = channel;
+      const chId = currentChannel.id || currentChannel.channelId || "";
+      if (chId) {
+        try { localStorage.setItem("binge_current_channel_id", chId); } catch(e) {}
+      }
+      saveChannels();
+
+      const searchBox = document.getElementById("search-box");
+      if (searchBox) searchBox.value = "";
+
+      const lastInfo = getLastWatchedInfo(chId);
+      let targetVideos = [...(currentChannel.videos || [])];
+      if (isAscending) targetVideos.reverse();
+
+      let targetIndex = 0;
+      if (lastInfo && lastInfo.videoId) {
+        const found = targetVideos.findIndex(v => v.id === lastInfo.videoId);
+        if (found >= 0) targetIndex = found;
+      }
+      currentIndex = targetIndex;
+
+      prepareList(true);
+
+      if (displayList.length > 0) {
+        playVideoByIndex(currentIndex, true);
+      }
+      updateChannelDropdown(false);
+      updateResumeBanner();
+    }
+
+    function prepareList(shouldScroll = false) {
+      if (!currentChannel || !currentChannel.videos) {
+        displayList = [];
+        renderList(shouldScroll);
+        updateCurrentPlayingTitle();
+        return;
+      }
+      const currentVideoId = currentPlayingVideoId || (displayList[currentIndex] || {}).id;
+      const query = document.getElementById("search-box").value.trim().toLowerCase();
+      let list = (currentChannel.videos || []).map((v, i) => ({
+        ...v,
+        originalIndex: i + 1
+      }));
+
+      if (isAscending) {
+        list.reverse();
+      }
+
+      if (isHideMembersOnly) {
+        list = list.filter(v => !isMembersOnlyVideo(v));
+      }
+
+      if (query) {
+        list = list.filter(v => v.title.toLowerCase().includes(query));
+      }
+
+      displayList = list;
+
+      if (currentVideoId) {
+        const found = displayList.findIndex(v => v.id === currentVideoId);
+        if (found >= 0) currentIndex = found;
+      }
+
+      renderList(shouldScroll);
+    }
+
+    // High performance DOM rendering with batched HTML and event delegation
+    const videoListContainer = document.getElementById("video-list");
+    if (videoListContainer) {
+      videoListContainer.addEventListener("click", (e) => {
+        const item = e.target.closest(".video-item");
+        if (!item) return;
+        const idx = parseInt(item.dataset.index, 10);
+        if (!isNaN(idx)) {
+          playVideoByIndex(idx);
+        }
+      });
+    }
+
+    function renderList(shouldScroll = false) {
+      const container = videoListContainer || document.getElementById("video-list");
+      document.getElementById("list-count").innerText = `${displayList.length}개`;
+
+      if (displayList.length === 0) {
+        if (!currentChannel || channels.length === 0) {
+          container.innerHTML = '<div style="padding:40px 20px;text-align:center;color:#888;font-size:13px;line-height:1.7;">등록된 채널이 없습니다.<br><span style="color:#3ea6ff;font-weight:bold;">[+ 채널]</span> 버튼을 눌러 시청할 채널을 추가해 보세요!</div>';
+        } else {
+          container.innerHTML = '<div style="padding:24px;text-align:center;color:#888;font-size:12px;">동영상이 없거나 검색 결과가 없습니다.</div>';
+        }
+        return;
+      }
+
+      const lastInfo = getLastWatchedInfo(currentChannel.id);
+      const lastVideoId = lastInfo ? lastInfo.videoId : null;
+      let watchedChanged = false;
+      const totalCount = currentChannel.videos.length;
+
+      const itemsHtml = displayList.map((video, index) => {
+        const savedPos = getVideoPosition(video.id);
+        // If actively watching in progress (savedPos > 5), it should not be marked as watched
+        if (savedPos > 5 && watchedSet.has(video.id)) {
+          watchedSet.delete(video.id);
+          watchedChanged = true;
+        }
+        const isCurrent = index === currentIndex;
+        const isWatched = watchedSet.has(video.id);
+        const isLastWatched = (video.id === lastVideoId);
+
+        const itemClasses = "video-item" + 
+          (isCurrent ? " active" : "") +
+          (isWatched ? " watched" : "") +
+          (isLastWatched ? " is-last-watched" : "");
+
+        const displayNumber = isAscending ? (totalCount - video.originalIndex + 1) : video.originalIndex;
+
+        return `
+          <div class="${itemClasses}" data-index="${index}">
+            <div class="video-num">${displayNumber}.</div>
+            <div class="video-info">
+              <div class="video-title">${video.title}</div>
+              <div class="video-meta">
+                <span class="duration-badge">${video.duration || '동영상'}</span>
+                ${isMembersOnlyVideo(video) ? '<span class="members-badge" title="회원전용(멤버십) 동영상">🔒 멤버십</span>' : ''}
+                <span class="last-watched-tag" title="최근 시청한 영상">📍 최근</span>
+                ${savedPos > 5 ? `<span class="resume-pos-tag" title="${formatTime(savedPos)} 지점부터 이어보기">⏱️ ${formatTime(savedPos)}</span>` : ''}
+                <span class="watched-check" title="시청 완료된 영상">✓ 완료</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      if (watchedChanged) {
+        saveWatched();
+      }
+
+      container.innerHTML = itemsHtml;
+
+      if (shouldScroll) {
+        const activeItem = container.querySelector(".video-item.active");
+        if (activeItem) {
+          setTimeout(() => {
+            scrollItemToTop(activeItem, true);
+          }, 30);
+        }
+      }
+    }
+
+    // Scroll active video item to the very top once, letting user freely scroll up/down afterwards
+    function scrollItemToTop(item, instant = false) {
+      if (!item) return;
+      const container = document.getElementById("video-list");
+      if (!container) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const itemRect = item.getBoundingClientRect();
+      const diff = itemRect.top - containerRect.top;
+      const targetTop = container.scrollTop + diff - 6;
+
+      container.scrollTo({
+        top: Math.max(0, targetTop),
+        behavior: instant ? "auto" : "smooth"
+      });
+    }
+
+    function saveCurrentPlayingPosition() {
+      if (!currentPlayingVideoId || !isPlayerReady || !player || typeof player.getCurrentTime !== "function") return;
+      try {
+        if (typeof player.getPlayerState === "function" && player.getPlayerState() === YT.PlayerState.ENDED) {
+          return;
+        }
+        const curr = Math.floor(player.getCurrentTime() || 0);
+        const dur = typeof player.getDuration === "function" ? (player.getDuration() || 0) : 0;
+        if (curr > 3 && (dur === 0 || curr < dur - 10)) {
+          saveVideoPosition(currentPlayingVideoId, curr);
+          const container = document.getElementById("video-list");
+          if (container) {
+            const curItem = container.querySelector(`.video-item[data-index="${currentIndex}"]`);
+            if (curItem) {
+              const metaEl = curItem.querySelector(".video-meta");
+              let posTag = curItem.querySelector(".resume-pos-tag");
+              if (!posTag && metaEl) {
+                posTag = document.createElement("span");
+                posTag.className = "resume-pos-tag";
+                const watchedCheck = metaEl.querySelector(".watched-check");
+                if (watchedCheck) {
+                  metaEl.insertBefore(posTag, watchedCheck);
+                } else {
+                  metaEl.appendChild(posTag);
+                }
+              }
+              if (posTag) {
+                posTag.innerText = `⏱️ ${formatTime(curr)}`;
+                posTag.title = `${formatTime(curr)} 지점부터 이어보기`;
+              }
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
+    function playVideoByIndex(index, instantScroll = false) {
+      if (index < 0 || index >= displayList.length) return;
+
+      // Save previous video's playback position before switching
+      saveCurrentPlayingPosition();
+
+      currentIndex = index;
+      const video = displayList[currentIndex];
+      if (!video) return;
+      currentPlayingVideoId = video.id;
+
+      // Hide error overlay
+      errorOverlay.classList.remove("show");
+
+      const displayNumber = isAscending ? (currentChannel.videos.length - video.originalIndex + 1) : video.originalIndex;
+      currentTitleEl.innerText = `${displayNumber}. ${video.title}`;
+      document.title = `${displayNumber}. ${video.title} - 정주행`;
+
+      // Update Header Stats: Upload Date & View Count
+      const statDate = document.getElementById("stat-upload-date");
+      const statViews = document.getElementById("stat-views");
+      const dateText = video.uploadDate || "날짜 미상";
+      const viewsText = video.views ? (video.views.startsWith("조회수") ? video.views : "조회수 " + video.views) : "조회수 정보 없음";
+
+      if (statDate) {
+        statDate.style.display = "inline-flex";
+        statDate.innerText = `📅 ${dateText}`;
+      }
+      if (statViews) {
+        statViews.style.display = "inline-flex";
+        statViews.innerText = `👁️ ${viewsText}`;
+      }
+      const mainDivider = document.getElementById("stat-main-divider");
+      if (mainDivider) {
+        mainDivider.style.display = "inline-block";
+      }
+      if (currentTitleEl) {
+        currentTitleEl.title = `${video.title}\n📅 업로드일: ${dateText}\n👁️ ${viewsText}`;
+      }
+
+      // Background async update to guarantee freshest real-time info from server
+      fetch(`/api/video_info?id=${video.id}`)
+        .then(r => r.json())
+        .then(res => {
+          if (res.success && res.data) {
+            let changed = false;
+            if (res.data.uploadDate && res.data.uploadDate !== "날짜 미상" && res.data.uploadDate !== video.uploadDate) {
+              video.uploadDate = res.data.uploadDate;
+              changed = true;
+            }
+            if (res.data.views && res.data.views !== "조회수 정보 없음" && res.data.views !== video.views) {
+              video.views = res.data.views;
+              changed = true;
+            }
+            if (res.data.title && res.data.title !== video.title) {
+              video.title = res.data.title;
+              changed = true;
+            }
+
+            // Real-time channel subscriber update
+            if (res.data.subscribers) {
+              const statSub = document.getElementById("stat-subscribers");
+              if (statSub) statSub.innerText = `👥 ${res.data.subscribers}`;
+              currentChannel.subscribers = res.data.subscribers;
+            }
+
+            // Real-time like count update
+            const statLikes = document.getElementById("stat-likes");
+            const statLikesDiv = document.getElementById("stat-likes-divider");
+            if (res.data.likes) {
+              if (statLikes) {
+                statLikes.innerText = `👍 ${res.data.likes}`;
+                statLikes.style.display = "inline-flex";
+              }
+              if (statLikesDiv) statLikesDiv.style.display = "inline";
+            } else {
+              if (statLikes) statLikes.style.display = "none";
+              if (statLikesDiv) statLikesDiv.style.display = "none";
+            }
+
+            if (displayList[currentIndex] && displayList[currentIndex].id === video.id) {
+              if (statDate) statDate.innerText = `📅 ${video.uploadDate || '날짜 미상'}`;
+              if (statViews) statViews.innerText = `👁️ ${video.views || '조회수 정보 없음'}`;
+              if (currentTitleEl) {
+                currentTitleEl.innerText = `${displayNumber}. ${video.title}`;
+                currentTitleEl.title = `${video.title}\n📅 업로드일: ${video.uploadDate || '날짜 미상'}\n👁️ ${video.views || '조회수 정보 없음'}${res.data.likes ? '\n👍 ' + res.data.likes : ''}`;
+              }
+            }
+
+            if (changed) {
+              saveChannels();
+            }
+          }
+        })
+        .catch(() => {});
+
+      // Check saved playback position to resume seamlessly
+      const startSec = getVideoPosition(video.id);
+
+      if (isPlayerReady && player && typeof player.loadVideoById === "function") {
+        if (startSec > 5) {
+          player.loadVideoById({
+            videoId: video.id,
+            startSeconds: startSec
+          });
+          showToast(`⏱️ ${formatTime(startSec)} 지점부터 이어봅니다`, 2200);
+        } else {
+          player.loadVideoById(video.id);
+        }
+
+        const sp = parseFloat(speedSelect.value) || 1;
+        if (typeof player.setPlaybackRate === "function") {
+          player.setPlaybackRate(sp);
+        }
+
+        if (typeof player.playVideo === "function") {
+          player.playVideo();
+        }
+      } else {
+        pendingVideoId = video.id;
+      }
+
+      // Record last watched number & position (DO NOT mark as watched prematurely)
+      saveLastWatchedInfo(currentChannel.id, video.id, displayNumber, video.title, startSec);
+
+      // Fast O(1) DOM update: remove previous active & last-watched, set new one
+      const container = document.getElementById("video-list");
+      const prevActive = container.querySelector(".video-item.active");
+      if (prevActive) prevActive.classList.remove("active");
+
+      const prevLast = container.querySelector(".video-item.is-last-watched");
+      if (prevLast) prevLast.classList.remove("is-last-watched");
+
+      const currentItem = container.querySelector(`.video-item[data-index="${index}"]`);
+      if (currentItem) {
+        currentItem.classList.add("active", "is-last-watched");
+        // Keep existing watched state if previously watched, but don't force it
+        if (watchedSet.has(video.id)) {
+          currentItem.classList.add("watched");
+        } else {
+          currentItem.classList.remove("watched");
+        }
+        // Position current video at the very top of the list once
+        scrollItemToTop(currentItem, instantScroll);
+        if (instantScroll) {
+          setTimeout(() => scrollItemToTop(currentItem, true), 60);
+          setTimeout(() => scrollItemToTop(currentItem, true), 180);
+        }
+      }
+      updateToggleWatchedBtn();
+    }
+
+    function markCurrentVideoAsWatched() {
+      const video = displayList[currentIndex];
+      if (!video) return;
+      if (!watchedSet.has(video.id)) {
+        watchedSet.add(video.id);
+        saveWatched();
+        const container = document.getElementById("video-list");
+        const currentItem = container.querySelector(`.video-item[data-index="${currentIndex}"]`);
+        if (currentItem) currentItem.classList.add("watched");
+        updateToggleWatchedBtn();
+      }
+    }
+
+    function updateToggleWatchedBtn() {
+      const video = displayList[currentIndex];
+      const toggleBtn = document.getElementById("toggle-watched-btn");
+      if (!video || !toggleBtn) return;
+      if (watchedSet.has(video.id)) {
+        toggleBtn.innerText = "✓ 시청완료됨 (취소)";
+        toggleBtn.style.color = "#e0e0e0";
+      } else {
+        toggleBtn.innerText = "✓ 시청 완료로 표시";
+        toggleBtn.style.color = "";
+      }
+    }
+
+    // YouTube API Hook
+    let progressCheckTimer = null;
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('yt-iframe', {
+        events: {
+          'onReady': function() {
+            isPlayerReady = true;
+            updateQualityOptions();
+
+            // Restore saved volume and mute
+            const savedVol = localStorage.getItem("yt_volume");
+            if (savedVol !== null && typeof player.setVolume === "function") {
+              const v = parseInt(savedVol, 10);
+              player.setVolume(v);
+              if (volumeSlider) volumeSlider.value = v;
+            }
+            const savedMuted = localStorage.getItem("yt_muted");
+            if (savedMuted === "true" && typeof player.mute === "function") {
+              player.mute();
+              if (muteBtn) muteBtn.innerText = "🔇";
+            } else if (savedMuted === "false" && typeof player.unMute === "function") {
+              player.unMute();
+              if (muteBtn) muteBtn.innerText = (parseInt(volumeSlider?.value || 100, 10) > 50) ? "🔊" : "🔉";
+            }
+
+            const sp = parseFloat(speedSelect.value) || 1;
+            if (player && player.setPlaybackRate) player.setPlaybackRate(sp);
+
+            if (pendingVideoId) {
+              const startSec = getVideoPosition(pendingVideoId);
+              if (startSec > 5) {
+                player.loadVideoById({ videoId: pendingVideoId, startSeconds: startSec });
+                showToast(`⏱️ ${formatTime(startSec)} 지점부터 이어봅니다`, 2200);
+              } else {
+                player.loadVideoById(pendingVideoId);
+              }
+              if (typeof player.playVideo === "function") {
+                player.playVideo();
+              }
+              pendingVideoId = null;
+            }
+          },
+          'onPlaybackQualityChange': function(event) {
+            updateQualityOptions();
+          },
+          'onStateChange': function(event) {
+            if (event.data === YT.PlayerState.PLAYING) {
+              if (playPauseBtn) playPauseBtn.innerText = '⏸';
+              applyPreferredQuality();
+              updateQualityOptions();
+            }
+
+            if (event.data === YT.PlayerState.PAUSED) {
+              if (playPauseBtn) playPauseBtn.innerText = '▶';
+            }
+            if (event.data === YT.PlayerState.ENDED) {
+              if (playPauseBtn) playPauseBtn.innerText = '▶';
+              const curVid = displayList[currentIndex];
+              if (curVid) clearVideoPosition(curVid.id);
+              markCurrentVideoAsWatched();
+
+              const autoPlay = document.getElementById("auto-play-next").checked;
+              if (autoPlay) {
+                if (currentIndex + 1 < displayList.length) {
+                  showToast("다음 영상으로 넘어갑니다 ⏭", 2000);
+                  setTimeout(() => {
+                    playVideoByIndex(currentIndex + 1);
+                  }, 600);
+                } else {
+                  showToast("🎉 정주행 완료! 채널의 마지막 영상까지 모두 시청했습니다!", 4000);
+                }
+              }
+            }
+          },
+          'onError': function(event) {
+            const video = displayList[currentIndex];
+            if (video) {
+              errorYtLink.href = `https://www.youtube.com/watch?v=${video.id}`;
+              errorOverlay.classList.add("show");
+            }
+          }
+        }
+      });
+    }
+
+    errorSkipBtn.addEventListener("click", () => {
+      if (currentIndex + 1 < displayList.length) {
+        playVideoByIndex(currentIndex + 1);
+      }
+    });
+
+    // Speed Control
+    speedSelect.addEventListener("change", () => {
+      const sp = parseFloat(speedSelect.value);
+      if (isPlayerReady && player && typeof player.setPlaybackRate === "function") {
+        player.setPlaybackRate(sp);
+      }
+    });
+
+    // Button Controls
+    document.getElementById("prev-btn").addEventListener("click", () => {
+      if (currentIndex > 0) playVideoByIndex(currentIndex - 1);
+    });
+
+    document.getElementById("next-btn").addEventListener("click", () => {
+      if (currentIndex + 1 < displayList.length) playVideoByIndex(currentIndex + 1);
+    });
+
+    document.getElementById("toggle-watched-btn").addEventListener("click", () => {
+      const video = displayList[currentIndex];
+      if (!video) return;
+      if (watchedSet.has(video.id)) {
+        watchedSet.delete(video.id);
+        showToast("시청 완료 표시를 취소했습니다.");
+      } else {
+        watchedSet.add(video.id);
+        clearVideoPosition(video.id);
+        showToast("✓ 시청 완료로 표시했습니다.");
+      }
+      saveWatched();
+      const container = document.getElementById("video-list");
+      const currentItem = container ? container.querySelector(`.video-item[data-index="${currentIndex}"]`) : null;
+      if (currentItem) {
+        currentItem.classList.toggle("watched", watchedSet.has(video.id));
+        const posTag = currentItem.querySelector(".resume-pos-tag");
+        if (posTag && watchedSet.has(video.id)) posTag.remove();
+      }
+      updateToggleWatchedBtn();
+      updateResumeBanner();
+    });
+
+    document.getElementById("clear-watched-btn").addEventListener("click", () => {
+      if (confirm("시청 완료(✓) 기록을 모두 초기화하시겠습니까? (최근 보던 영상 번호는 유지됩니다)")) {
+        watchedSet.clear();
+        saveWatched();
+        prepareList(false);
+        updateToggleWatchedBtn();
+        showToast("시청 완료 기록이 깨끗하게 초기화되었습니다.");
+      }
+    });
+
+    function updateCurrentPlayingTitle() {
+      const currentVideo = displayList[currentIndex];
+      if (currentVideo && currentChannel && currentChannel.videos) {
+        const totalCount = currentChannel.videos.length;
+        const displayNumber = isAscending ? (totalCount - currentVideo.originalIndex + 1) : currentVideo.originalIndex;
+        currentTitleEl.innerText = `${displayNumber}. ${currentVideo.title}`;
+        document.title = `${displayNumber}. ${currentVideo.title} - 정주행`;
+      } else if (!currentChannel || channels.length === 0) {
+        currentTitleEl.innerText = "채널을 추가해 주세요";
+        document.title = "유튜브 정주행 플레이어";
+      }
+    }
+
+    orderDescBtn.addEventListener("click", function() {
+      isAscending = false;
+      localStorage.setItem("binge_sort_asc", "false");
+      updateOrderButtons();
+      prepareList(true);
+      updateResumeBanner();
+      updateCurrentPlayingTitle();
+    });
+
+    orderAscBtn.addEventListener("click", function() {
+      isAscending = true;
+      localStorage.setItem("binge_sort_asc", "true");
+      updateOrderButtons();
+      prepareList(true);
+      updateResumeBanner();
+      updateCurrentPlayingTitle();
+    });
+
+    const filterMembershipBtn = document.getElementById("filter-membership-btn");
+    if (filterMembershipBtn) {
+      filterMembershipBtn.addEventListener("click", function() {
+        isHideMembersOnly = !isHideMembersOnly;
+        localStorage.setItem("binge_hide_members", isHideMembersOnly ? "true" : "false");
+        updateMembershipFilterButton();
+        prepareList(true);
+        updateResumeBanner();
+        updateCurrentPlayingTitle();
+        if (isHideMembersOnly) {
+          showToast("🔒 회원전용(멤버십) 영상을 목록에서 제외했습니다.");
+        } else {
+          showToast("🔓 회원전용(멤버십) 영상을 목록에 포함했습니다.");
+        }
+      });
+    }
+
+    // Search Box with 120ms debounce
+    const searchBox = document.getElementById("search-box");
+    let searchDebounce = null;
+    searchBox.addEventListener("input", () => {
+      clearTimeout(searchDebounce);
+      searchDebounce = setTimeout(() => {
+        prepareList(false); // don't jump scroll while typing
+      }, 120);
+    });
+    searchBox.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        searchBox.value = "";
+        prepareList(true);
+        searchBox.blur();
+        if (document.body.classList.contains("mode-max")) {
+          hideSidebar(true);
+        }
+      }
+    });
+
+    // Screen Modes & Auto-Sliding Menus in Maximize Mode
+    const modeLarge = document.getElementById("mode-large");
+    const modeMax = document.getElementById("mode-max");
+    const rightTrigger = document.getElementById("right-edge-trigger");
+
+    let currentScreenMode = "large";
+    let rightMenuTimer = null;
+
+    function revealSidebar() {
+      if (!document.body.classList.contains("mode-max")) return;
+      clearTimeout(rightMenuTimer);
+      if (typeof wakeOverlay === "function") wakeOverlay();
+      sidebar.classList.add("revealed");
+    }
+
+    function hideSidebar(immediate = false) {
+      if (!document.body.classList.contains("mode-max")) return;
+      clearTimeout(rightMenuTimer);
+      const doHide = () => {
+        if (document.activeElement && sidebar.contains(document.activeElement)) return;
+        const modal = document.getElementById("channel-modal");
+        if (modal && modal.style.display === "flex") return;
+        sidebar.classList.remove("revealed");
+      };
+      if (immediate) {
+        doHide();
+      } else {
+        rightMenuTimer = setTimeout(doHide, 260);
+      }
+    }
+
+    // Trigger & Hover event listeners for right sidebar in mode-max
+    if (rightTrigger) {
+      rightTrigger.addEventListener("mouseenter", revealSidebar);
+    }
+    if (sidebar) {
+      sidebar.addEventListener("mouseenter", revealSidebar);
+      sidebar.addEventListener("mouseleave", () => hideSidebar(false));
+    }
+
+    // Global mousemove for edge detection in mode-max
+    window.addEventListener("mousemove", (e) => {
+      if (!document.body.classList.contains("mode-max")) return;
+
+      const winW = window.innerWidth;
+      const mouseX = e.clientX;
+
+      // Right edge detection: mouse within 35px of right screen edge
+      if (mouseX >= winW - 35) {
+        revealSidebar();
+      } else if (sidebar && sidebar.classList.contains("revealed")) {
+        const sidebarW = sidebar.offsetWidth || 380;
+        if (mouseX < winW - sidebarW) {
+          hideSidebar(false);
+        }
+      }
+    });
+
+    // Clicking player section immediately dismisses revealed overlays in mode-max
+    const playerSection = document.querySelector(".player-section");
+    if (playerSection) {
+      playerSection.addEventListener("click", () => {
+        if (document.body.classList.contains("mode-max")) {
+          const activeEl = document.activeElement;
+          if (activeEl && sidebar.contains(activeEl)) {
+            activeEl.blur();
+          }
+          hideSidebar(true);
+        }
+      });
+    }
+
+    function setMode(mode, savePref = true) {
+      if (mode === "normal") {
+        mode = "large";
+        try { localStorage.removeItem("binge_screen_mode"); } catch(e) {}
+      }
+      currentScreenMode = mode;
+      if (savePref) {
+        try { localStorage.setItem("binge_screen_mode", mode); } catch(e) {}
+      }
+      [modeLarge, modeMax].forEach(btn => btn && btn.classList.remove("active"));
+      clearTimeout(rightMenuTimer);
+
+      if (mode === "large") {
+        document.body.classList.remove("mode-max");
+        sidebar.classList.remove("hidden", "revealed");
+        const savedW = localStorage.getItem("binge_sidebar_width");
+        sidebar.style.width = savedW || "340px";
+        resizer.style.display = "block";
+        if (modeLarge) modeLarge.classList.add("active");
+      } else if (mode === "max") {
+        document.body.classList.add("mode-max");
+        sidebar.classList.remove("hidden", "revealed");
+        resizer.style.display = "none";
+        if (modeMax) modeMax.classList.add("active");
+      }
+    }
+
+    if (modeLarge) modeLarge.addEventListener("click", () => setMode("large"));
+    if (modeMax) modeMax.addEventListener("click", () => setMode("max"));
+
+    function toggleSidebar() {
+      if (document.body.classList.contains("mode-max")) {
+        const savedSidebarWidth = localStorage.getItem("binge_sidebar_width");
+        if (savedSidebarWidth) {
+          sidebar.style.width = savedSidebarWidth;
+        }
+        setMode("large");
+      } else {
+        setMode("max");
+      }
+    }
+    const toggleSidebarBtn = document.getElementById("toggle-sidebar-btn");
+    if (toggleSidebarBtn) toggleSidebarBtn.addEventListener("click", toggleSidebar);
+    const openSidebarFloat = document.getElementById("open-sidebar-float");
+    if (openSidebarFloat) openSidebarFloat.addEventListener("click", () => setMode("large"));
+
+    // Bug-free Drag Resizer
+    let isDragging = false;
+    let dragContainerWidth = 0;
+    resizer.addEventListener("mousedown", () => {
+      isDragging = true;
+      dragContainerWidth = mainBox ? mainBox.getBoundingClientRect().width : window.innerWidth;
+      resizer.classList.add("dragging");
+      iframeEl.style.pointerEvents = "none";
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!isDragging) return;
+      const newWidth = dragContainerWidth - e.clientX;
+      if (newWidth > 180 && newWidth < 700) {
+        sidebar.style.width = newWidth + "px";
+        [modeLarge, modeMax].forEach(btn => btn && btn.classList.remove("active"));
+      }
+    });
+
+    window.addEventListener("mouseup", () => {
+      if (isDragging) {
+        isDragging = false;
+        resizer.classList.remove("dragging");
+        iframeEl.style.pointerEvents = "";
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        if (sidebar.style.width) {
+          localStorage.setItem("binge_sidebar_width", sidebar.style.width);
+        }
+      }
+    });
+
+    // Modern On-Screen Controls Overlay Controller (Option 2: 0s instant hide, no cursor hide)
+    const videoWrapper = document.getElementById("video-wrapper");
+    const controlsOverlay = document.getElementById("video-controls-overlay");
+    const clickLayer = document.getElementById("video-click-layer");
+    const centerRipple = document.getElementById("center-ripple");
+    const playPauseBtn = document.getElementById("play-pause-btn");
+    const progressTrack = document.getElementById("progress-track");
+    const progressBuffered = document.getElementById("progress-buffered");
+    const progressFill = document.getElementById("progress-fill");
+    const progressThumb = document.getElementById("progress-thumb");
+    const progressTooltip = document.getElementById("progress-tooltip");
+    const timeDisplay = document.getElementById("time-display");
+    const volumeSlider = document.getElementById("volume-slider");
+    const muteBtn = document.getElementById("mute-btn");
+    const fullscreenBtn = document.getElementById("fullscreen-btn");
+    const qualitySelect = document.getElementById("quality-select");
+
+    let mouseIdleTimer = null;
+    let isScrubbing = false;
+    let lastSavedTimeInt = 0;
+
+    function showCenterRipple(iconText) {
+      if (!centerRipple) return;
+      centerRipple.innerText = iconText;
+      centerRipple.classList.add("active");
+      setTimeout(() => centerRipple.classList.remove("active"), 280);
+    }
+
+    function togglePlayPause() {
+      if (!isPlayerReady || !player) return;
+      try {
+        const state = player.getPlayerState();
+        if (state === YT.PlayerState.PLAYING) {
+          player.pauseVideo();
+          if (playPauseBtn) playPauseBtn.innerText = "▶";
+          showCenterRipple("⏸");
+        } else {
+          player.playVideo();
+          if (playPauseBtn) playPauseBtn.innerText = "⏸";
+          showCenterRipple("▶");
+        }
+      } catch (e) {}
+    }
+
+    if (playPauseBtn) playPauseBtn.addEventListener("click", togglePlayPause);
+
+    // Prevent clicks inside controls overlay from bubbling to clickLayer
+    if (controlsOverlay) {
+      controlsOverlay.addEventListener("click", (e) => {
+        e.stopPropagation();
+      });
+    }
+
+    // Keep controls open when select dropdowns are focused
+    [qualitySelect, speedSelect].forEach(sel => {
+      if (sel) {
+        sel.addEventListener("focus", () => {
+          if (videoWrapper) videoWrapper.classList.add("controls-open");
+        });
+        sel.addEventListener("blur", () => {
+          if (videoWrapper) videoWrapper.classList.remove("controls-open");
+        });
+      }
+    });
+
+    // Click Layer: Single-click Play/Pause, Double-click Fullscreen
+    let singleClickTimer = null;
+    if (clickLayer) {
+      clickLayer.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (singleClickTimer) {
+          clearTimeout(singleClickTimer);
+          singleClickTimer = null;
+          toggleFullscreen();
+        } else {
+          singleClickTimer = setTimeout(() => {
+            singleClickTimer = null;
+            togglePlayPause();
+          }, 220);
+        }
+      });
+    }
+
+    // Auto-hide controls & cursor: Appears on hover/mousemove, HIDES BOTH TOGETHER WHEN IDLE, HIDES IMMEDIATELY ON MOUSELEAVE (0s delay!)
+    function wakeOverlay() {
+      clearTimeout(mouseIdleTimer);
+      if (videoWrapper) videoWrapper.classList.remove("idle");
+    }
+
+    function scheduleOverlayHide(delay = 2200) {
+      clearTimeout(mouseIdleTimer);
+      mouseIdleTimer = setTimeout(() => {
+        if (isScrubbing || (controlsOverlay && controlsOverlay.matches(":hover")) || (videoWrapper && videoWrapper.classList.contains("controls-open"))) return;
+        if (videoWrapper) videoWrapper.classList.add("idle");
+      }, delay);
+    }
+
+    let lastMouseMoveTime = 0;
+    function handleMouseMove() {
+      const now = Date.now();
+      if (now - lastMouseMoveTime > 80) {
+        lastMouseMoveTime = now;
+        wakeOverlay();
+        scheduleOverlayHide(2200);
+      }
+    }
+
+    if (videoWrapper) {
+      videoWrapper.addEventListener("mouseenter", () => {
+        wakeOverlay();
+        scheduleOverlayHide(2200);
+      });
+
+      videoWrapper.addEventListener("mousemove", handleMouseMove);
+
+      // KEY FEATURE: 0-second instant hide when mouse leaves the video!
+      videoWrapper.addEventListener("mouseleave", () => {
+        clearTimeout(mouseIdleTimer);
+        if (videoWrapper) videoWrapper.classList.add("idle");
+        if (progressTooltip) progressTooltip.style.display = "none";
+      });
+    }
+
+    if (controlsOverlay) {
+      controlsOverlay.addEventListener("mouseenter", () => {
+        wakeOverlay();
+        scheduleOverlayHide(2200);
+      });
+      controlsOverlay.addEventListener("mousemove", handleMouseMove);
+    }
+
+    // Progress Bar Scrubber Update Loop & Periodic Position Saver
+    let lastTimeStr = "";
+    let lastPctStr = "";
+    let lastLoadedStr = "";
+
+    function updateProgressLoop() {
+      if (isScrubbing || !isPlayerReady || !player) return;
+      if (document.hidden) return; // Skip updating DOM when tab is in background
+
+      try {
+        // Skip calculation when player is paused, ended, or idle (State 1 = PLAYING, 3 = BUFFERING)
+        if (typeof player.getPlayerState === "function") {
+          const state = player.getPlayerState();
+          if (state !== 1 && state !== 3) return;
+        }
+
+        if (typeof player.getCurrentTime === "function" && typeof player.getDuration === "function") {
+          const curr = player.getCurrentTime() || 0;
+          const dur = player.getDuration() || 0;
+          if (dur > 0) {
+            const pct = Math.min(100, Math.max(0, (curr / dur) * 100));
+            const pctStr = pct.toFixed(2) + "%";
+            if (pctStr !== lastPctStr) {
+              lastPctStr = pctStr;
+              if (progressFill) progressFill.style.width = pctStr;
+              if (progressThumb) progressThumb.style.left = pctStr;
+            }
+
+            const timeStr = `${formatTime(curr)} / ${formatTime(dur)}`;
+            if (timeStr !== lastTimeStr) {
+              lastTimeStr = timeStr;
+              if (timeDisplay) timeDisplay.innerText = timeStr;
+            }
+
+            // Auto-save playback position every 2 seconds for seamless resume
+            const currInt = Math.floor(curr);
+            if (Math.abs(currInt - lastSavedTimeInt) >= 2) {
+              lastSavedTimeInt = currInt;
+              const targetVidId = currentPlayingVideoId || (displayList[currentIndex] || {}).id;
+              if (targetVidId && currInt > 3 && currInt < dur - 10) {
+                saveVideoPosition(targetVidId, currInt);
+              }
+            }
+          }
+        }
+        if (progressBuffered && typeof player.getVideoLoadedFraction === "function") {
+          const loadedStr = ((player.getVideoLoadedFraction() || 0) * 100).toFixed(1) + "%";
+          if (loadedStr !== lastLoadedStr) {
+            lastLoadedStr = loadedStr;
+            progressBuffered.style.width = loadedStr;
+          }
+        }
+      } catch (e) {}
+    }
+    setInterval(updateProgressLoop, 400);
+
+    // Progress Scrubber Click & Drag
+    let cachedTrackRect = null;
+    function seekFromMouseEvent(e) {
+      if (!isPlayerReady || !player || !progressTrack) return null;
+      try {
+        const rect = cachedTrackRect || progressTrack.getBoundingClientRect();
+        const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        const dur = player.getDuration() || 0;
+        const targetTime = pos * dur;
+        if (progressFill) progressFill.style.width = (pos * 100) + "%";
+        if (progressThumb) progressThumb.style.left = (pos * 100) + "%";
+        if (timeDisplay) timeDisplay.innerText = `${formatTime(targetTime)} / ${formatTime(dur)}`;
+        return targetTime;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    if (progressTrack) {
+      progressTrack.addEventListener("mousedown", (e) => {
+        isScrubbing = true;
+        cachedTrackRect = progressTrack.getBoundingClientRect();
+        progressTrack.classList.add("scrubbing");
+        document.body.style.userSelect = "none";
+        const t = seekFromMouseEvent(e);
+        if (t !== null && player) player.seekTo(t, false);
+      });
+
+      progressTrack.addEventListener("mousemove", (e) => {
+        if (!isPlayerReady || !player) return;
+        const rect = cachedTrackRect || progressTrack.getBoundingClientRect();
+        const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        const dur = player.getDuration() || 0;
+        const hoverTime = pos * dur;
+        if (progressTooltip) {
+          const pct = pos * 100;
+          progressTooltip.style.display = "block";
+          progressTooltip.style.left = pct + "%";
+          if (pct < 6) {
+            progressTooltip.style.transform = "translateX(0%)";
+          } else if (pct > 94) {
+            progressTooltip.style.transform = "translateX(-100%)";
+          } else {
+            progressTooltip.style.transform = "translateX(-50%)";
+          }
+          progressTooltip.innerText = formatTime(hoverTime);
+        }
+      });
+
+      progressTrack.addEventListener("mouseleave", () => {
+        if (progressTooltip) progressTooltip.style.display = "none";
+      });
+    }
+
+    window.addEventListener("mousemove", (e) => {
+      if (!isScrubbing) return;
+      seekFromMouseEvent(e);
+    });
+
+    window.addEventListener("mouseup", (e) => {
+      if (isScrubbing) {
+        isScrubbing = false;
+        if (progressTrack) progressTrack.classList.remove("scrubbing");
+        document.body.style.userSelect = "";
+        const t = seekFromMouseEvent(e);
+        cachedTrackRect = null;
+        if (t !== null && player) player.seekTo(t, true);
+      }
+    });
+
+    // Volume & Mute
+    if (volumeSlider) {
+      volumeSlider.addEventListener("input", (e) => {
+        if (!isPlayerReady || !player) return;
+        const val = parseInt(e.target.value, 10);
+        player.setVolume(val);
+        localStorage.setItem("yt_volume", val);
+        if (val === 0) {
+          if (muteBtn) muteBtn.innerText = "🔇";
+          localStorage.setItem("yt_muted", "true");
+        } else {
+          if (player.isMuted()) player.unMute();
+          localStorage.setItem("yt_muted", "false");
+          if (muteBtn) muteBtn.innerText = val > 50 ? "🔊" : "🔉";
+        }
+      });
+    }
+
+    if (muteBtn) {
+      muteBtn.addEventListener("click", () => {
+        if (!isPlayerReady || !player) return;
+        if (player.isMuted()) {
+          player.unMute();
+          localStorage.setItem("yt_muted", "false");
+          const v = player.getVolume() || 100;
+          muteBtn.innerText = v > 50 ? "🔊" : "🔉";
+          if (volumeSlider) volumeSlider.value = v;
+        } else {
+          player.mute();
+          localStorage.setItem("yt_muted", "true");
+          muteBtn.innerText = "🔇";
+          if (volumeSlider) volumeSlider.value = 0;
+        }
+      });
+    }
+
+    // Fullscreen Toggle & Events
+    let previousModeBeforeFs = "large";
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        const root = document.documentElement;
+        const req = root.requestFullscreen || root.webkitRequestFullscreen || root.mozRequestFullScreen || root.msRequestFullscreen;
+        if (req) {
+          req.call(root).catch(err => {
+            console.warn("Document fullscreen failed, falling back to videoWrapper:", err);
+            if (videoWrapper && videoWrapper.requestFullscreen) videoWrapper.requestFullscreen();
+          });
+        } else if (videoWrapper && videoWrapper.requestFullscreen) {
+          videoWrapper.requestFullscreen();
+        }
+      } else {
+        const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+        if (exit) exit.call(document);
+      }
+    }
+
+    function handleFullscreenChange() {
+      const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      if (isFs) {
+        if (!document.body.classList.contains("mode-max")) {
+          previousModeBeforeFs = currentScreenMode || "large";
+        }
+        setMode("max", false);
+      } else {
+        if (previousModeBeforeFs) {
+          setMode(previousModeBeforeFs, false);
+        }
+      }
+    }
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+
+    if (fullscreenBtn) fullscreenBtn.addEventListener("click", toggleFullscreen);
+
+    // Video Quality Hierarchy & Adaptive Quality Controller
+    const QUALITY_HIERARCHY = ["highres", "hd2160", "hd1440", "hd1080", "hd720", "large", "medium", "small", "tiny"];
+
+    function applyPreferredQuality(explicitQ) {
+      if (!isPlayerReady || !player || typeof player.setPlaybackQuality !== "function") return;
+      const targetQ = explicitQ || localStorage.getItem("yt_preferred_quality") || "auto";
+      if (targetQ === "auto") {
+        try { player.setPlaybackQuality("auto"); } catch (e) {}
+        return;
+      }
+
+      if (typeof player.getAvailableQualityLevels === "function") {
+        const levels = player.getAvailableQualityLevels();
+        if (levels && levels.length > 0) {
+          if (levels.includes(targetQ)) {
+            try { player.setPlaybackQuality(targetQ); } catch (e) {}
+            return;
+          }
+          // If the exact preferred quality is not available, choose the closest best available quality
+          const targetIdx = QUALITY_HIERARCHY.indexOf(targetQ);
+          if (targetIdx !== -1) {
+            let best = null;
+            for (let i = targetIdx; i < QUALITY_HIERARCHY.length; i++) {
+              if (levels.includes(QUALITY_HIERARCHY[i])) {
+                best = QUALITY_HIERARCHY[i];
+                break;
+              }
+            }
+            if (!best) {
+              for (let i = 0; i < QUALITY_HIERARCHY.length; i++) {
+                if (levels.includes(QUALITY_HIERARCHY[i])) {
+                  best = QUALITY_HIERARCHY[i];
+                  break;
+                }
+              }
+            }
+            if (best) {
+              try { player.setPlaybackQuality(best); } catch (e) {}
+              return;
+            }
+          }
+        }
+      }
+      try { player.setPlaybackQuality(targetQ); } catch (e) {}
+    }
+
+    function updateQualityOptions() {
+      if (!isPlayerReady || !player || typeof player.getAvailableQualityLevels !== "function") return;
+      try {
+        const levels = player.getAvailableQualityLevels();
+        if (!qualitySelect || !levels || levels.length === 0) return;
+
+        const currentQ = typeof player.getPlaybackQuality === "function" ? player.getPlaybackQuality() : "auto";
+        const savedQ = localStorage.getItem("yt_preferred_quality") || "auto";
+
+        const qualityLabels = {
+          "highres": "4K Ultra",
+          "hd2160": "4K (2160p)",
+          "hd1440": "2K (1440p)",
+          "hd1080": "1080p HD",
+          "hd720": "720p HD",
+          "large": "480p",
+          "medium": "360p",
+          "small": "240p",
+          "tiny": "144p",
+          "auto": "화질: 자동"
+        };
+
+        const currentValues = Array.from(qualitySelect.options).map(o => o.value);
+        const desiredValues = ["auto", ...levels.filter(lvl => lvl !== "auto")];
+        const isSame = currentValues.length === desiredValues.length &&
+                       currentValues.every((val, idx) => val === desiredValues[idx]);
+
+        if (!isSame) {
+          qualitySelect.innerHTML = "";
+
+          const autoOpt = document.createElement("option");
+          autoOpt.value = "auto";
+          autoOpt.innerText = "화질: 자동";
+          qualitySelect.appendChild(autoOpt);
+
+          desiredValues.slice(1).forEach(lvl => {
+            const opt = document.createElement("option");
+            opt.value = lvl;
+            opt.innerText = qualityLabels[lvl] || lvl;
+            qualitySelect.appendChild(opt);
+          });
+        }
+
+        // Set selected value
+        if (savedQ && (levels.includes(savedQ) || savedQ === "auto")) {
+          qualitySelect.value = savedQ;
+        } else if (currentQ && (levels.includes(currentQ) || currentQ === "auto")) {
+          qualitySelect.value = currentQ;
+        }
+      } catch (e) {}
+    }
+
+    if (qualitySelect) {
+      qualitySelect.addEventListener("change", () => {
+        if (!isPlayerReady || !player) return;
+        const q = qualitySelect.value;
+        localStorage.setItem("yt_preferred_quality", q);
+        applyPreferredQuality(q);
+        showToast(`화질 설정: ${qualitySelect.options[qualitySelect.selectedIndex].text}`, 1500);
+      });
+    }
+
+    // Auto-save playback position before page unload
+    window.addEventListener("beforeunload", () => {
+      if (isPlayerReady && player && typeof player.getCurrentTime === "function") {
+        const curr = Math.floor(player.getCurrentTime() || 0);
+        const dur = player.getDuration() || 0;
+        const curVid = displayList[currentIndex];
+        if (curVid && curr > 3 && curr < dur - 10) {
+          saveVideoPosition(curVid.id, curr);
+        }
+      }
+    });
+
+    // Snap current playing video to top of list button
+    const scrollToCurrentBtn = document.getElementById("scroll-to-current-btn");
+    if (scrollToCurrentBtn) {
+      scrollToCurrentBtn.addEventListener("click", () => {
+        const container = document.getElementById("video-list");
+        const activeItem = container.querySelector(".video-item.active");
+        if (activeItem) {
+          scrollItemToTop(activeItem, false);
+          showToast("현재 재생 중인 영상으로 이동했습니다 📍", 1200);
+        }
+      });
+    }
+
+    // Global Shortcuts
+    window.addEventListener("keydown", (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.target.tagName === "TEXTAREA" || e.target.isContentEditable) return;
+
+      if (e.code === "Space" || e.key === "k" || e.key === "K") {
+        e.preventDefault();
+        togglePlayPause();
+      } else if (e.key === "j" || e.key === "J") {
+        if (isPlayerReady && player) {
+          const t = player.getCurrentTime();
+          player.seekTo(Math.max(0, t - 10), true);
+          showToast("⏪ 10초 뒤로", 1000);
+        }
+      } else if (e.key === "l" || e.key === "L") {
+        if (isPlayerReady && player) {
+          const t = player.getCurrentTime();
+          player.seekTo(t + 10, true);
+          showToast("⏩ 10초 앞으로", 1000);
+        }
+      } else if (e.key === "ArrowLeft" && !e.shiftKey) {
+        e.preventDefault();
+        if (isPlayerReady && player) {
+          const t = player.getCurrentTime();
+          player.seekTo(Math.max(0, t - 5), true);
+          showToast("⏪ 5초 뒤로", 800);
+        }
+      } else if (e.key === "ArrowRight" && !e.shiftKey) {
+        e.preventDefault();
+        if (isPlayerReady && player) {
+          const t = player.getCurrentTime();
+          player.seekTo(t + 5, true);
+          showToast("⏩ 5초 앞으로", 800);
+        }
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (isPlayerReady && player) {
+          const vol = Math.min(100, (player.getVolume() || 100) + 5);
+          player.setVolume(vol);
+          if (player.isMuted()) player.unMute();
+          localStorage.setItem("yt_volume", vol);
+          localStorage.setItem("yt_muted", "false");
+          if (volumeSlider) volumeSlider.value = vol;
+          if (muteBtn) muteBtn.innerText = vol > 50 ? "🔊" : "🔉";
+          showToast(`🔊 볼륨: ${vol}%`, 800);
+        }
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (isPlayerReady && player) {
+          const vol = Math.max(0, (player.getVolume() || 100) - 5);
+          player.setVolume(vol);
+          localStorage.setItem("yt_volume", vol);
+          if (volumeSlider) volumeSlider.value = vol;
+          if (muteBtn) muteBtn.innerText = vol === 0 ? "🔇" : (vol > 50 ? "🔊" : "🔉");
+          showToast(`🔉 볼륨: ${vol}%`, 800);
+        }
+      } else if (e.key === "f" || e.key === "F") {
+        toggleFullscreen();
+      } else if (e.key >= "0" && e.key <= "9") {
+        if (isPlayerReady && player) {
+          const pct = parseInt(e.key, 10) * 0.1;
+          const dur = player.getDuration() || 0;
+          if (dur > 0) {
+            player.seekTo(dur * pct, true);
+            showToast(`⏩ ${pct * 100}% 위치로 이동`, 1000);
+          }
+        }
+      } else if ((e.key === "ArrowRight" && e.shiftKey) || (e.key === "N" && e.shiftKey)) {
+        if (currentIndex + 1 < displayList.length) playVideoByIndex(currentIndex + 1);
+      } else if ((e.key === "ArrowLeft" && e.shiftKey) || (e.key === "P" && e.shiftKey)) {
+        if (currentIndex > 0) playVideoByIndex(currentIndex - 1);
+      } else if (e.key === "m" || e.key === "M") {
+        if (isPlayerReady && player) {
+          if (player.isMuted()) {
+            player.unMute();
+            localStorage.setItem("yt_muted", "false");
+            const v = player.getVolume() || 100;
+            if (muteBtn) muteBtn.innerText = v > 50 ? "🔊" : "🔉";
+            if (volumeSlider) volumeSlider.value = v;
+            showToast("🔊 음소거 해제", 1000);
+          } else {
+            player.mute();
+            localStorage.setItem("yt_muted", "true");
+            if (muteBtn) muteBtn.innerText = "🔇";
+            if (volumeSlider) volumeSlider.value = 0;
+            showToast("🔇 음소거", 1000);
+          }
+        }
+      } else if (e.key === "t" || e.key === "T") {
+        toggleSidebar();
+      } else if (e.key === "[" || e.key === "]") {
+        const speeds = [0.75, 1, 1.25, 1.5, 1.75, 2];
+        let currentRate = parseFloat(speedSelect.value) || 1;
+        let curIdx = speeds.indexOf(currentRate);
+        if (curIdx === -1) curIdx = 1;
+        if (e.key === "[") {
+          curIdx = Math.max(0, curIdx - 1);
+        } else {
+          curIdx = Math.min(speeds.length - 1, curIdx + 1);
+        }
+        const newRate = speeds[curIdx];
+        speedSelect.value = String(newRate);
+        if (isPlayerReady && player && typeof player.setPlaybackRate === "function") {
+          player.setPlaybackRate(newRate);
+        }
+        showToast(`⚡ 재생 속도: ${newRate}x`, 1000);
+      } else if (e.key === "w" || e.key === "W") {
+        document.getElementById("toggle-watched-btn")?.click();
+      }
+    });
+
+    // Channel Add / Search Modal
+    const modal = document.getElementById("channel-modal");
+    const channelInput = document.getElementById("channel-url-input");
+    const modalStatus = document.getElementById("modal-status");
+    const searchResultsContainer = document.getElementById("channel-search-results");
+    const modalSearchBtn = document.getElementById("modal-search-btn");
+
+    function escapeText(str) {
+      if (!str) return "";
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    document.getElementById("add-channel-btn").addEventListener("click", () => {
+      modal.style.display = "flex";
+      channelInput.value = "";
+      modalStatus.className = "status-msg";
+      modalStatus.innerText = "";
+      searchResultsContainer.innerHTML = "";
+      searchResultsContainer.style.display = "none";
+      channelInput.focus();
+    });
+
+    function closeChannelModal() {
+      modal.style.display = "none";
+      channelInput.value = "";
+      modalStatus.className = "status-msg";
+      modalStatus.innerText = "";
+      searchResultsContainer.innerHTML = "";
+      searchResultsContainer.style.display = "none";
+    }
+
+    document.getElementById("modal-cancel-btn").addEventListener("click", closeChannelModal);
+
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeChannelModal();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && modal.style.display === "flex") {
+        closeChannelModal();
+      }
+    });
+
+    async function executeChannelSearch() {
+      const q = channelInput.value.trim();
+      if (!q) {
+        modalStatus.className = "status-msg error";
+        modalStatus.innerText = "채널 이름이나 키워드를 입력해 주세요.";
+        return;
+      }
+
+      // If user directly entered a URL
+      if (q.startsWith("http://") || q.startsWith("https://")) {
+        loadAndApplyChannel(q);
+        return;
+      }
+
+      modalStatus.className = "status-msg loading";
+      modalStatus.innerText = `'${q}' 연관 채널을 검색하는 중입니다...`;
+      searchResultsContainer.style.display = "none";
+      searchResultsContainer.innerHTML = "";
+
+      try {
+        const res = await fetch(`/api/search_channels?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+
+        if (data.success && data.channels && data.channels.length > 0) {
+          modalStatus.className = "status-msg";
+          modalStatus.innerText = `검색 결과 ${data.channels.length}개 (원하는 채널을 클릭하세요):`;
+          renderSearchResults(data.channels);
+        } else {
+          modalStatus.className = "status-msg error";
+          modalStatus.innerText = `'${q}'에 대한 채널을 찾을 수 없습니다. 다른 키워드로 검색해 보세요.`;
+        }
+      } catch (err) {
+        modalStatus.className = "status-msg error";
+        modalStatus.innerText = "채널 검색 중 오류 발생: " + err.message;
+      }
+    }
+
+    function renderSearchResults(channelsList) {
+      searchResultsContainer.innerHTML = "";
+      channelsList.forEach(ch => {
+        const card = document.createElement("div");
+        card.className = "channel-result-card";
+        const thumbUrl = ch.thumbnail || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='44' height='44' fill='%23555'><rect width='44' height='44' rx='22'/></svg>";
+        card.innerHTML = `
+          <img class="channel-result-thumb" referrerpolicy="no-referrer" src="${thumbUrl}" alt="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'44\\' height=\\'44\\' fill=\\'%23555\\'><rect width=\\'44\\' height=\\'44\\' rx=\\'22\\'/></svg>'">
+          <div class="channel-result-info">
+            <div class="channel-result-name">${escapeText(ch.title)}</div>
+            <div class="channel-result-meta">
+              <span>${escapeText(ch.subscribers || "구독자 정보 없음")}</span>
+              ${ch.handle ? `<span>•</span><span>${escapeText(ch.handle)}</span>` : ""}
+            </div>
+          </div>
+          <button class="channel-result-btn">선택</button>
+        `;
+        card.addEventListener("click", () => {
+          loadAndApplyChannel(`https://www.youtube.com/channel/${ch.channelId}/videos`, ch.title, ch.subscribers);
+        });
+        searchResultsContainer.appendChild(card);
+      });
+      searchResultsContainer.style.display = "flex";
+    }
+
+    async function loadAndApplyChannel(targetUrl, channelNameHint = "", subscribersHint = "") {
+      modalStatus.className = "status-msg loading";
+      modalStatus.innerText = `${channelNameHint ? `'${channelNameHint}'` : "채널"} 동영상 목록을 가져오는 중입니다...`;
+      searchResultsContainer.style.display = "none";
+
+      try {
+        const res = await fetch(`/api/fetch_channel?url=${encodeURIComponent(targetUrl)}`);
+        const data = await res.json();
+
+        if (data.success && data.data && data.data.videos && data.data.videos.length > 0) {
+          const newCh = {
+            id: data.data.channelId || ("ch_" + Date.now()),
+            name: data.data.channelName || channelNameHint || "새 채널",
+            url: data.data.channelUrl || targetUrl,
+            playlistId: data.data.playlistId || "",
+            subscribers: data.data.subscribers || subscribersHint || "",
+            videos: data.data.videos
+          };
+
+          const existingIdx = channels.findIndex(c => c.id === newCh.id);
+          if (existingIdx >= 0) {
+            channels[existingIdx] = newCh;
+          } else {
+            channels.push(newCh);
+          }
+
+          saveChannels();
+          updateChannelDropdown();
+          switchChannel(newCh);
+
+          modalStatus.className = "status-msg success";
+          modalStatus.innerText = `성공! '${newCh.name}' 채널 동영상 ${newCh.videos.length}개를 불러왔습니다.`;
+          setTimeout(() => {
+            closeChannelModal();
+          }, 700);
+        } else {
+          modalStatus.className = "status-msg error";
+          modalStatus.innerText = (data && data.error) ? data.error : "동영상을 찾을 수 없습니다.";
+        }
+      } catch (err) {
+        modalStatus.className = "status-msg error";
+        modalStatus.innerText = "동영상 불러오기 오류: " + err.message;
+      }
+    }
+
+    modalSearchBtn.addEventListener("click", executeChannelSearch);
+    channelInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        executeChannelSearch();
+      }
+    });
+
+    // Real-time check and sync for newly uploaded videos in current channel
+    let isSyncing = false;
+    async function syncChannelLatestVideos(silent = false) {
+      if (!currentChannel || !currentChannel.id || isSyncing) return;
+      isSyncing = true;
+      const syncBtn = document.getElementById("sync-latest-btn");
+      if (syncBtn) syncBtn.innerText = "🔄 동기화중";
+
+      try {
+        const resp = await fetch(`/api/sync_latest_videos?channel_id=${encodeURIComponent(currentChannel.id)}`);
+        const data = await resp.json();
+        if (data.success) {
+          if (data.subscribers) {
+            currentChannel.subscribers = data.subscribers;
+            const statSub = document.getElementById("stat-subscribers");
+            if (statSub) statSub.innerText = `👥 ${data.subscribers}`;
+          }
+
+          if (data.latestVideos && Array.isArray(data.latestVideos) && data.latestVideos.length > 0) {
+            const existingIds = new Set(currentChannel.videos.map(v => v.id));
+            const newVideos = data.latestVideos.filter(v => !existingIds.has(v.id));
+
+            if (newVideos.length > 0) {
+              // Prepend newly found videos to currentChannel.videos
+              currentChannel.videos = [...newVideos, ...currentChannel.videos];
+              // Re-index
+              currentChannel.videos.forEach((v, idx) => {
+                v.originalIndex = idx + 1;
+              });
+
+              saveChannels();
+              prepareList();
+              updateCurrentPlayingTitle();
+              updateResumeBanner();
+              updateChannelDropdown();
+              showToast(`🎉 새로운 영상 ${newVideos.length}개가 실시간으로 추가되었습니다!`, 3500);
+            } else if (!silent) {
+              showToast("✅ 최신 영상이 모두 동기화되어 있습니다.", 2000);
+            }
+          }
+        } else if (!silent) {
+          showToast("최신 영상 확인 중 문제가 발생했습니다.", 2000);
+        }
+      } catch (err) {
+        if (!silent) showToast("서버 연결 실패", 2000);
+      } finally {
+        isSyncing = false;
+        if (syncBtn) syncBtn.innerText = "🔄 최신";
+      }
+    }
+
+    const syncLatestBtn = document.getElementById("sync-latest-btn");
+    if (syncLatestBtn) {
+      syncLatestBtn.addEventListener("click", () => syncChannelLatestVideos(false));
+    }
+
+    // Initialize UI
+    updateOrderButtons();
+    updateMembershipFilterButton();
+    updateChannelDropdown();
+    let savedScreenMode = localStorage.getItem("binge_screen_mode");
+    if (savedScreenMode === "normal") {
+      try { localStorage.removeItem("binge_screen_mode"); } catch(e) {}
+      savedScreenMode = "large";
+    }
+    setMode(savedScreenMode || "large");
+
+    // 1. First identify the last watched video if tab was closed and reopened
+    let initialIdx = 0;
+    if (currentChannel && currentChannel.id) {
+      const initialLastInfo = getLastWatchedInfo(currentChannel.id);
+      if (initialLastInfo && initialLastInfo.videoId) {
+        // Create temporary list matching current order to find exact index
+        let tempVideos = [...(currentChannel.videos || [])];
+        if (isAscending) tempVideos.reverse();
+        const found = tempVideos.findIndex(v => v.id === initialLastInfo.videoId);
+        if (found >= 0) {
+          initialIdx = found;
+        }
+      }
+    }
+    currentIndex = initialIdx;
+
+    // 2. Prepare list with currentIndex already aligned to the last watched video
+    prepareList(true);
+
+    // 3. Open directly with the last watched video at the very top of the list
+    if (currentChannel && displayList.length > 0) {
+      playVideoByIndex(currentIndex, true);
+    }
+    // 4. Background sync channels from server if available
+    if (window.location.protocol.startsWith("http")) {
+      fetch("/api/channels")
+        .then(r => r.json())
+        .then(res => {
+          if (res.success && Array.isArray(res.channels) && res.channels.length > 0) {
+            let changed = false;
+            for (const sCh of res.channels) {
+              sCh.id = sCh.id || sCh.channelId;
+              sCh.name = sCh.name || sCh.channelName || "채널";
+              const localIdx = channels.findIndex(c => (c.id || c.channelId) === sCh.id);
+              if (localIdx === -1) {
+                channels.push(sCh);
+                changed = true;
+              } else if (sCh.videos && sCh.videos.length > 0 && (sCh.videos.length !== channels[localIdx].videos.length || (channels[localIdx].videos[0] && sCh.videos[0].id !== channels[localIdx].videos[0].id))) {
+                channels[localIdx] = sCh;
+                if (currentChannel && (currentChannel.id || currentChannel.channelId) === sCh.id) {
+                  currentChannel = sCh;
+                  prepareList();
+                  updateCurrentPlayingTitle();
+                  updateResumeBanner();
+                }
+                changed = true;
+              }
+            }
+            if (!currentChannel && channels.length > 0) {
+              const target = (res.activeChannelId && channels.find(c => c.id === res.activeChannelId)) || channels[0];
+              switchChannel(target);
+              changed = true;
+            } else if (res.activeChannelId && currentChannel) {
+              const target = channels.find(c => c.id === res.activeChannelId);
+              if (target && target.id !== currentChannel.id) {
+                switchChannel(target);
+                changed = true;
+              }
+            }
+            if (changed) {
+              localStorage.setItem("binge_channels", JSON.stringify(channels));
+              updateChannelDropdown();
+            }
+          }
+        })
+        .catch(() => {});
+    }
+
+    // 5. Background check for new uploads in real-time
+    setTimeout(() => {
+      syncChannelLatestVideos(true);
+    }, 1500);
+  </script>
+</body>
+</html>
