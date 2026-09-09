@@ -343,7 +343,7 @@
       display: block;
     }
 
-    .video-wrapper iframe {
+    .video-wrapper iframe, .video-wrapper div#yt-iframe {
       width: 100%;
       height: 100%;
       border: none;
@@ -1483,14 +1483,7 @@
         <div class="video-wrapper" id="video-wrapper">
           <!-- Toast Message (Placed inside video-wrapper so it displays in fullscreen) -->
           <div class="toast-msg" id="toast-msg"></div>
-          <iframe id="yt-iframe"
-                  src="https://www.youtube-nocookie.com/embed/?enablejsapi=1&controls=0&rel=0&iv_load_policy=3&modestbranding=1"
-                  title="YouTube video player"
-                  frameborder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  referrerpolicy="strict-origin-when-cross-origin"
-                  allowfullscreen>
-          </iframe>
+          <div id="yt-iframe"></div>
 
           <!-- Transparent Click Layer for Single-Click Play/Pause & Double-Click Fullscreen -->
           <div class="video-click-layer" id="video-click-layer">
@@ -1679,7 +1672,16 @@
     </div>
   </div>
 
-  <!-- YouTube IFrame API -->
+  <!-- YouTube IFrame API Global Bootstrap -->
+  <script>
+    window._ytApiReady = false;
+    window.onYouTubeIframeAPIReady = function() {
+      window._ytApiReady = true;
+      if (typeof window.initPlayer === "function") {
+        window.initPlayer();
+      }
+    };
+  </script>
   <script src="https://www.youtube.com/iframe_api"></script>
 
   <script>
@@ -2350,6 +2352,9 @@
         }
       } else {
         pendingVideoId = video.id;
+        if (typeof window.initPlayer === "function") {
+          window.initPlayer();
+        }
       }
 
       // Record last watched number & position (DO NOT mark as watched prematurely)
@@ -2410,89 +2415,131 @@
 
     // YouTube API Hook
     let progressCheckTimer = null;
-    function onYouTubeIframeAPIReady() {
-      player = new YT.Player('yt-iframe', {
-        events: {
-          'onReady': function() {
-            isPlayerReady = true;
-            updateQualityOptions();
+    let isInitializingPlayer = false;
 
-            // Restore saved volume and mute
-            const savedVol = localStorage.getItem("yt_volume");
-            if (savedVol !== null && typeof player.setVolume === "function") {
-              const v = parseInt(savedVol, 10);
-              player.setVolume(v);
-              if (volumeSlider) volumeSlider.value = v;
-            }
-            const savedMuted = localStorage.getItem("yt_muted");
-            if (savedMuted === "true" && typeof player.mute === "function") {
-              player.mute();
-              if (muteBtn) muteBtn.innerText = "🔇";
-            } else if (savedMuted === "false" && typeof player.unMute === "function") {
-              player.unMute();
-              if (muteBtn) muteBtn.innerText = (parseInt(volumeSlider?.value || 100, 10) > 50) ? "🔊" : "🔉";
-            }
+    function initPlayer() {
+      if (player && isPlayerReady) return;
+      if (isInitializingPlayer) return;
+      if (typeof YT === "undefined" || !YT.Player) return;
 
-            const sp = parseFloat(speedSelect.value) || 1;
-            if (player && player.setPlaybackRate) player.setPlaybackRate(sp);
+      const iframeTarget = document.getElementById('yt-iframe');
+      if (!iframeTarget) return;
 
-            if (pendingVideoId) {
-              const startSec = getVideoPosition(pendingVideoId);
-              if (startSec > 5) {
-                player.loadVideoById({ videoId: pendingVideoId, startSeconds: startSec });
-                showToast(`⏱️ ${formatTime(startSec)} 지점부터 이어봅니다`, 2200);
-              } else {
-                player.loadVideoById(pendingVideoId);
-              }
-              if (typeof player.playVideo === "function") {
-                player.playVideo();
-              }
-              pendingVideoId = null;
-            }
+      isInitializingPlayer = true;
+      const initialVideo = (displayList && displayList[currentIndex]) || null;
+      const initialVideoId = pendingVideoId || (initialVideo ? initialVideo.id : "");
+      const startSec = initialVideoId ? getVideoPosition(initialVideoId) : 0;
+
+      try {
+        player = new YT.Player('yt-iframe', {
+          height: '100%',
+          width: '100%',
+          videoId: initialVideoId || undefined,
+          playerVars: {
+            enablejsapi: 1,
+            controls: 0,
+            rel: 0,
+            iv_load_policy: 3,
+            modestbranding: 1,
+            playsinline: 1,
+            origin: window.location.origin
           },
-          'onPlaybackQualityChange': function(event) {
-            updateQualityOptions();
-          },
-          'onStateChange': function(event) {
-            if (event.data === YT.PlayerState.PLAYING) {
-              if (playPauseBtn) playPauseBtn.innerText = '⏸';
-              applyPreferredQuality();
+          events: {
+            'onReady': function() {
+              isPlayerReady = true;
+              isInitializingPlayer = false;
               updateQualityOptions();
-            }
 
-            if (event.data === YT.PlayerState.PAUSED) {
-              if (playPauseBtn) playPauseBtn.innerText = '▶';
-              saveCurrentPlayingPosition();
-            }
-            if (event.data === YT.PlayerState.ENDED) {
-              if (playPauseBtn) playPauseBtn.innerText = '▶';
-              const curVid = displayList[currentIndex];
-              if (curVid) clearVideoPosition(curVid.id);
-              markCurrentVideoAsWatched();
+              // Restore saved volume and mute
+              const savedVol = localStorage.getItem("yt_volume");
+              if (savedVol !== null && typeof player.setVolume === "function") {
+                const v = parseInt(savedVol, 10);
+                player.setVolume(v);
+                if (volumeSlider) volumeSlider.value = v;
+              }
+              const savedMuted = localStorage.getItem("yt_muted");
+              if (savedMuted === "true" && typeof player.mute === "function") {
+                player.mute();
+                if (muteBtn) muteBtn.innerText = "🔇";
+              } else if (savedMuted === "false" && typeof player.unMute === "function") {
+                player.unMute();
+                if (muteBtn) muteBtn.innerText = (parseInt(volumeSlider?.value || 100, 10) > 50) ? "🔊" : "🔉";
+              }
 
-              const autoPlay = document.getElementById("auto-play-next").checked;
-              if (autoPlay) {
-                if (currentIndex + 1 < displayList.length) {
-                  showToast("다음 영상으로 넘어갑니다 ⏭", 2000);
-                  setTimeout(() => {
-                    playVideoByIndex(currentIndex + 1);
-                  }, 600);
+              const sp = parseFloat(speedSelect.value) || 1;
+              if (player && player.setPlaybackRate) player.setPlaybackRate(sp);
+
+              if (pendingVideoId) {
+                const pos = getVideoPosition(pendingVideoId);
+                if (pos > 5) {
+                  player.loadVideoById({ videoId: pendingVideoId, startSeconds: pos });
+                  showToast(`⏱️ ${formatTime(pos)} 지점부터 이어봅니다`, 2200);
                 } else {
-                  showToast("🎉 정주행 완료! 채널의 마지막 영상까지 모두 시청했습니다!", 4000);
+                  player.loadVideoById(pendingVideoId);
+                }
+                if (typeof player.playVideo === "function") {
+                  player.playVideo();
+                }
+                pendingVideoId = null;
+              } else if (initialVideoId && startSec > 5) {
+                if (typeof player.seekTo === "function") {
+                  player.seekTo(startSec, true);
+                  showToast(`⏱️ ${formatTime(startSec)} 지점부터 이어봅니다`, 2200);
                 }
               }
-            }
-          },
-          'onError': function(event) {
-            const video = displayList[currentIndex];
-            if (video) {
-              errorYtLink.href = `https://www.youtube.com/watch?v=${video.id}`;
-              errorOverlay.classList.add("show");
+            },
+            'onPlaybackQualityChange': function(event) {
+              updateQualityOptions();
+            },
+            'onStateChange': function(event) {
+              if (event.data === YT.PlayerState.PLAYING) {
+                if (playPauseBtn) playPauseBtn.innerText = '⏸';
+                applyPreferredQuality();
+                updateQualityOptions();
+              }
+
+              if (event.data === YT.PlayerState.PAUSED) {
+                if (playPauseBtn) playPauseBtn.innerText = '▶';
+                saveCurrentPlayingPosition();
+              }
+              if (event.data === YT.PlayerState.ENDED) {
+                if (playPauseBtn) playPauseBtn.innerText = '▶';
+                const curVid = displayList[currentIndex];
+                if (curVid) clearVideoPosition(curVid.id);
+                markCurrentVideoAsWatched();
+
+                const autoPlay = document.getElementById("auto-play-next").checked;
+                if (autoPlay) {
+                  if (currentIndex + 1 < displayList.length) {
+                    showToast("다음 영상으로 넘어갑니다 ⏭", 2000);
+                    setTimeout(() => {
+                      playVideoByIndex(currentIndex + 1);
+                    }, 600);
+                  } else {
+                    showToast("🎉 정주행 완료! 채널의 마지막 영상까지 모두 시청했습니다!", 4000);
+                  }
+                }
+              }
+            },
+            'onError': function(event) {
+              const video = displayList[currentIndex];
+              if (video) {
+                errorYtLink.href = `https://www.youtube.com/watch?v=${video.id}`;
+                errorOverlay.classList.add("show");
+              }
             }
           }
-        }
-      });
+        });
+      } catch (err) {
+        isInitializingPlayer = false;
+      }
     }
+
+    function onYouTubeIframeAPIReady() {
+      initPlayer();
+    }
+    window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
+    window.initPlayer = initPlayer;
 
     errorSkipBtn.addEventListener("click", () => {
       if (currentIndex + 1 < displayList.length) {
@@ -2755,7 +2802,8 @@
       isDragging = true;
       dragContainerWidth = mainBox ? mainBox.getBoundingClientRect().width : window.innerWidth;
       resizer.classList.add("dragging");
-      iframeEl.style.pointerEvents = "none";
+      const ytEl = document.getElementById("yt-iframe");
+      if (ytEl) ytEl.style.pointerEvents = "none";
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
     });
@@ -2773,7 +2821,8 @@
       if (isDragging) {
         isDragging = false;
         resizer.classList.remove("dragging");
-        iframeEl.style.pointerEvents = "";
+        const ytEl = document.getElementById("yt-iframe");
+        if (ytEl) ytEl.style.pointerEvents = "";
         document.body.style.cursor = "";
         document.body.style.userSelect = "";
         if (sidebar.style.width) {
@@ -2811,9 +2860,17 @@
     }
 
     function togglePlayPause() {
-      if (!isPlayerReady || !player) return;
+      if (!isPlayerReady || !player) {
+        if (typeof window.initPlayer === "function") {
+          window.initPlayer();
+        }
+        if (displayList && displayList[currentIndex]) {
+          playVideoByIndex(currentIndex);
+        }
+        return;
+      }
       try {
-        const state = player.getPlayerState();
+        const state = (typeof player.getPlayerState === "function") ? player.getPlayerState() : -1;
         if (state === YT.PlayerState.PLAYING) {
           player.pauseVideo();
           if (playPauseBtn) playPauseBtn.innerText = "▶";
@@ -2823,7 +2880,9 @@
           if (playPauseBtn) playPauseBtn.innerText = "⏸";
           showCenterRipple("▶");
         }
-      } catch (e) {}
+      } catch (e) {
+        try { if (player && player.playVideo) player.playVideo(); } catch(err) {}
+      }
     }
 
     if (playPauseBtn) playPauseBtn.addEventListener("click", togglePlayPause);
@@ -3595,6 +3654,22 @@
     // 2. Open directly with the last watched video at the very top of the list
     if (currentChannel && displayList.length > 0) {
       playVideoByIndex(currentIndex, true);
+    }
+
+    // 3. Initialize YouTube Player if API was already loaded (e.g. from cache on refresh)
+    if (window._ytApiReady || (typeof YT !== "undefined" && YT.Player)) {
+      initPlayer();
+    } else {
+      let checkAttempts = 0;
+      const apiCheckInterval = setInterval(() => {
+        checkAttempts++;
+        if (typeof YT !== "undefined" && YT.Player) {
+          clearInterval(apiCheckInterval);
+          initPlayer();
+        } else if (checkAttempts > 20) {
+          clearInterval(apiCheckInterval);
+        }
+      }, 200);
     }
     // 4. Background sync channels from server if available
     if (window.location.protocol.startsWith("http")) {
