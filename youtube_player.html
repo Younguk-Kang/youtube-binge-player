@@ -1002,6 +1002,24 @@
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
     }
 
+    .membership-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #1e1e1e;
+      border: 1px solid #383838;
+      border-radius: 7px;
+      padding: 2px 4px 2px 7px;
+    }
+
+    .membership-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #aaa;
+      white-space: nowrap;
+      user-select: none;
+    }
+
     .order-btn {
       background: transparent;
       border: none;
@@ -1617,9 +1635,12 @@
             <button id="order-desc" class="order-btn" title="최신 순">최신순</button>
             <button id="order-asc" class="order-btn" title="오래된 순(정주행 추천)">정주행</button>
           </div>
-          <div class="membership-toggle">
-            <button id="membership-hide-btn" class="order-btn" title="회원전용(멤버십) 영상을 목록에서 제외합니다">🔒 멤버십제외</button>
-            <button id="membership-show-btn" class="order-btn" title="모든 영상(회원전용 포함)을 목록에 표시합니다">🔓 멤버십포함</button>
+          <div class="membership-group">
+            <span class="membership-label">🔒 멤버십</span>
+            <div class="membership-toggle">
+              <button id="membership-hide-btn" class="order-btn" title="회원전용(멤버십) 영상을 목록에서 제외합니다">제외</button>
+              <button id="membership-show-btn" class="order-btn" title="모든 영상(회원전용 포함)을 목록에 표시합니다">포함</button>
+            </div>
           </div>
           <div class="toolbar-right-group">
             <button id="scroll-to-current-btn" class="order-btn" title="현재 재생 중인 영상으로 이동">📍 현재영상</button>
