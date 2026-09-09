@@ -1667,6 +1667,11 @@
       localStorage.setItem("binge_channels_clean_v2", "true");
     }
 
+    function getChannelId(ch) {
+      if (!ch) return "";
+      return ch.id || ch.channelId || "";
+    }
+
     let channels = [];
     try {
       channels = JSON.parse(localStorage.getItem("binge_channels") || "[]");
@@ -1850,6 +1855,7 @@
 
     // Save last watched info for the current channel (including playback position)
     function saveLastWatchedInfo(channelId, videoId, displayNumber, title, currentTime = 0) {
+      if (!channelId || !videoId) return;
       const info = {
         channelId: channelId,
         videoId: videoId,
@@ -1858,11 +1864,14 @@
         currentTime: currentTime,
         timestamp: Date.now()
       };
-      localStorage.setItem("last_watched_" + channelId, JSON.stringify(info));
+      try {
+        localStorage.setItem("last_watched_" + channelId, JSON.stringify(info));
+      } catch(e) {}
       updateResumeBanner();
     }
 
     function getLastWatchedInfo(channelId) {
+      if (!channelId) return null;
       const data = localStorage.getItem("last_watched_" + channelId);
       if (!data) return null;
       try {
@@ -1873,16 +1882,18 @@
     }
 
     function updateResumeBanner() {
-      if (!currentChannel || !currentChannel.id) {
+      const chId = getChannelId(currentChannel);
+      if (!chId) {
         resumeBanner.style.display = "none";
         return;
       }
-      const info = getLastWatchedInfo(currentChannel.id);
+      const info = getLastWatchedInfo(chId);
       if (info && info.videoId) {
         const targetIndex = displayList.findIndex(v => v.id === info.videoId);
         if (targetIndex >= 0) {
           const video = displayList[targetIndex];
-          const currentNum = isAscending ? (currentChannel.videos.length - video.originalIndex + 1) : video.originalIndex;
+          const totalCount = (currentChannel.videos || []).length;
+          const currentNum = isAscending ? (totalCount - video.originalIndex + 1) : video.originalIndex;
           const savedPos = getVideoPosition(video.id);
           resumeBanner.style.display = "flex";
           if (savedPos > 5) {
@@ -1962,6 +1973,7 @@
     function switchChannel(channel) {
       if (!channel) {
         currentChannel = null;
+        currentPlayingVideoId = null;
         currentIndex = 0;
         prepareList(true);
         updateChannelDropdown(false);
@@ -1974,7 +1986,7 @@
       currentPlayingVideoId = null;
 
       currentChannel = channel;
-      const chId = currentChannel.id || currentChannel.channelId || "";
+      const chId = getChannelId(currentChannel);
       if (chId) {
         try { localStorage.setItem("binge_current_channel_id", chId); } catch(e) {}
       }
@@ -1982,17 +1994,6 @@
 
       const searchBox = document.getElementById("search-box");
       if (searchBox) searchBox.value = "";
-
-      const lastInfo = getLastWatchedInfo(chId);
-      let targetVideos = [...(currentChannel.videos || [])];
-      if (isAscending) targetVideos.reverse();
-
-      let targetIndex = 0;
-      if (lastInfo && lastInfo.videoId) {
-        const found = targetVideos.findIndex(v => v.id === lastInfo.videoId);
-        if (found >= 0) targetIndex = found;
-      }
-      currentIndex = targetIndex;
 
       prepareList(true);
 
@@ -2004,14 +2005,23 @@
     }
 
     function prepareList(shouldScroll = false) {
-      if (!currentChannel || !currentChannel.videos) {
+      if (!currentChannel || !currentChannel.videos || currentChannel.videos.length === 0) {
         displayList = [];
+        currentIndex = 0;
         renderList(shouldScroll);
         updateCurrentPlayingTitle();
         return;
       }
-      const currentVideoId = currentPlayingVideoId || (displayList[currentIndex] || {}).id;
-      const query = document.getElementById("search-box").value.trim().toLowerCase();
+
+      const chId = getChannelId(currentChannel);
+      const lastInfo = getLastWatchedInfo(chId);
+      // Determine desired video to preserve/restore:
+      // Priority 1: currently playing video
+      // Priority 2: last watched video recorded for this channel
+      // Priority 3: current video at currentIndex if valid
+      const targetVideoId = currentPlayingVideoId || (lastInfo && lastInfo.videoId) || (displayList[currentIndex] ? displayList[currentIndex].id : null);
+
+      const query = document.getElementById("search-box") ? document.getElementById("search-box").value.trim().toLowerCase() : "";
       let list = (currentChannel.videos || []).map((v, i) => ({
         ...v,
         originalIndex: i + 1
@@ -2031,12 +2041,19 @@
 
       displayList = list;
 
-      if (currentVideoId) {
-        const found = displayList.findIndex(v => v.id === currentVideoId);
-        if (found >= 0) currentIndex = found;
+      if (targetVideoId) {
+        const found = displayList.findIndex(v => v.id === targetVideoId);
+        if (found >= 0) {
+          currentIndex = found;
+        } else {
+          currentIndex = 0;
+        }
+      } else {
+        currentIndex = 0;
       }
 
       renderList(shouldScroll);
+      updateCurrentPlayingTitle();
     }
 
     // High performance DOM rendering with batched HTML and event delegation
@@ -2139,39 +2156,54 @@
     }
 
     function saveCurrentPlayingPosition() {
-      if (!currentPlayingVideoId || !isPlayerReady || !player || typeof player.getCurrentTime !== "function") return;
-      try {
-        if (typeof player.getPlayerState === "function" && player.getPlayerState() === YT.PlayerState.ENDED) {
-          return;
-        }
-        const curr = Math.floor(player.getCurrentTime() || 0);
-        const dur = typeof player.getDuration === "function" ? (player.getDuration() || 0) : 0;
-        if (curr > 3 && (dur === 0 || curr < dur - 10)) {
-          saveVideoPosition(currentPlayingVideoId, curr);
-          const container = document.getElementById("video-list");
-          if (container) {
-            const curItem = container.querySelector(`.video-item[data-index="${currentIndex}"]`);
-            if (curItem) {
-              const metaEl = curItem.querySelector(".video-meta");
-              let posTag = curItem.querySelector(".resume-pos-tag");
-              if (!posTag && metaEl) {
-                posTag = document.createElement("span");
-                posTag.className = "resume-pos-tag";
-                const watchedCheck = metaEl.querySelector(".watched-check");
-                if (watchedCheck) {
-                  metaEl.insertBefore(posTag, watchedCheck);
-                } else {
-                  metaEl.appendChild(posTag);
-                }
+      if (!currentChannel) return;
+      const chId = getChannelId(currentChannel);
+      const curVid = displayList[currentIndex];
+      if (!curVid) return;
+
+      let curr = 0;
+      if (isPlayerReady && player && typeof player.getCurrentTime === "function") {
+        try {
+          if (typeof player.getPlayerState === "function" && player.getPlayerState() === YT.PlayerState.ENDED) {
+            return;
+          }
+          curr = Math.floor(player.getCurrentTime() || 0);
+        } catch (e) {}
+      } else {
+        curr = getVideoPosition(curVid.id) || 0;
+      }
+
+      const dur = (isPlayerReady && player && typeof player.getDuration === "function") ? (player.getDuration() || 0) : 0;
+      if (curr > 3 && (dur === 0 || curr < dur - 10)) {
+        saveVideoPosition(curVid.id, curr);
+        const container = document.getElementById("video-list");
+        if (container) {
+          const curItem = container.querySelector(`.video-item[data-index="${currentIndex}"]`);
+          if (curItem) {
+            const metaEl = curItem.querySelector(".video-meta");
+            let posTag = curItem.querySelector(".resume-pos-tag");
+            if (!posTag && metaEl) {
+              posTag = document.createElement("span");
+              posTag.className = "resume-pos-tag";
+              const watchedCheck = metaEl.querySelector(".watched-check");
+              if (watchedCheck) {
+                metaEl.insertBefore(posTag, watchedCheck);
+              } else {
+                metaEl.appendChild(posTag);
               }
-              if (posTag) {
-                posTag.innerText = `⏱️ ${formatTime(curr)}`;
-                posTag.title = `${formatTime(curr)} 지점부터 이어보기`;
-              }
+            }
+            if (posTag) {
+              posTag.innerText = `⏱️ ${formatTime(curr)}`;
+              posTag.title = `${formatTime(curr)} 지점부터 이어보기`;
             }
           }
         }
-      } catch (e) {}
+      }
+
+      // Always persist last watched info with exact video ID and position
+      const totalCount = (currentChannel.videos || []).length;
+      const displayNumber = isAscending ? (totalCount - curVid.originalIndex + 1) : curVid.originalIndex;
+      saveLastWatchedInfo(chId, curVid.id, displayNumber, curVid.title, curr);
     }
 
     function playVideoByIndex(index, instantScroll = false) {
@@ -2406,6 +2438,7 @@
 
             if (event.data === YT.PlayerState.PAUSED) {
               if (playPauseBtn) playPauseBtn.innerText = '▶';
+              saveCurrentPlayingPosition();
             }
             if (event.data === YT.PlayerState.ENDED) {
               if (playPauseBtn) playPauseBtn.innerText = '▶';
@@ -3154,16 +3187,20 @@
       });
     }
 
+    // Auto-save playback position & last watched info periodically
+    setInterval(() => {
+      if (isPlayerReady && player && typeof player.getPlayerState === "function") {
+        try {
+          if (player.getPlayerState() === YT.PlayerState.PLAYING) {
+            saveCurrentPlayingPosition();
+          }
+        } catch(e) {}
+      }
+    }, 4000);
+
     // Auto-save playback position before page unload
     window.addEventListener("beforeunload", () => {
-      if (isPlayerReady && player && typeof player.getCurrentTime === "function") {
-        const curr = Math.floor(player.getCurrentTime() || 0);
-        const dur = player.getDuration() || 0;
-        const curVid = displayList[currentIndex];
-        if (curVid && curr > 3 && curr < dur - 10) {
-          saveVideoPosition(curVid.id, curr);
-        }
-      }
+      saveCurrentPlayingPosition();
     });
 
     // Snap current playing video to top of list button
@@ -3516,26 +3553,10 @@
     }
     setMode(savedScreenMode || "large");
 
-    // 1. First identify the last watched video if tab was closed and reopened
-    let initialIdx = 0;
-    if (currentChannel && currentChannel.id) {
-      const initialLastInfo = getLastWatchedInfo(currentChannel.id);
-      if (initialLastInfo && initialLastInfo.videoId) {
-        // Create temporary list matching current order to find exact index
-        let tempVideos = [...(currentChannel.videos || [])];
-        if (isAscending) tempVideos.reverse();
-        const found = tempVideos.findIndex(v => v.id === initialLastInfo.videoId);
-        if (found >= 0) {
-          initialIdx = found;
-        }
-      }
-    }
-    currentIndex = initialIdx;
-
-    // 2. Prepare list with currentIndex already aligned to the last watched video
+    // 1. Prepare list directly (automatically matches last watched video by ID, respecting order & filters)
     prepareList(true);
 
-    // 3. Open directly with the last watched video at the very top of the list
+    // 2. Open directly with the last watched video at the very top of the list
     if (currentChannel && displayList.length > 0) {
       playVideoByIndex(currentIndex, true);
     }
