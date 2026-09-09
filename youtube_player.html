@@ -845,7 +845,7 @@
 
     /* Sidebar */
     .list-section {
-      width: 330px;
+      width: 350px;
       min-width: 240px;
       max-width: 650px;
       background-color: var(--card-bg);
@@ -981,51 +981,51 @@
       align-items: center;
       font-size: 11px;
       color: var(--text-muted);
-      gap: 6px;
+      gap: 4px;
       white-space: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .toolbar-actions::-webkit-scrollbar {
+      display: none;
     }
 
     .toolbar-right-group {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 3px;
+      flex-shrink: 0;
     }
 
     .order-toggle, .membership-toggle {
-      display: flex;
+      display: inline-flex;
+      align-items: center;
       background: #181818;
       border-radius: 6px;
-      padding: 2.5px;
+      padding: 2px;
       border: 1.5px solid #424242;
       white-space: nowrap;
       flex-shrink: 0;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
-    }
-
-    .membership-group {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      background: #1e1e1e;
-      border: 1px solid #383838;
-      border-radius: 7px;
-      padding: 2px 4px 2px 7px;
+      gap: 2px;
     }
 
     .membership-label {
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 600;
       color: #aaa;
       white-space: nowrap;
       user-select: none;
+      padding: 0 2px 0 4px;
     }
 
     .order-btn {
       background: transparent;
       border: none;
       color: var(--text-muted);
-      padding: 2.5px 8px;
-      font-size: 10.5px;
+      padding: 2px 5.5px;
+      font-size: 10px;
       border-radius: 4px;
       cursor: pointer;
       white-space: nowrap;
@@ -1048,7 +1048,8 @@
       background: #1a1a1a;
       border: 1.5px solid #3c3c3c;
       color: #bbb;
-      padding: 3px 8px;
+      padding: 2px 5.5px;
+      font-size: 10px;
       border-radius: 5px;
     }
 
@@ -1632,18 +1633,16 @@
         <!-- Filter & Quick Action Buttons -->
         <div class="toolbar-actions">
           <div class="order-toggle">
-            <button id="order-desc" class="order-btn" title="최신 순">최신순</button>
+            <button id="order-desc" class="order-btn" title="최신 순">최신</button>
             <button id="order-asc" class="order-btn" title="오래된 순(정주행 추천)">정주행</button>
           </div>
-          <div class="membership-group">
+          <div class="membership-toggle" title="회원전용(멤버십) 영상 필터">
             <span class="membership-label">🔒 멤버십</span>
-            <div class="membership-toggle">
-              <button id="membership-hide-btn" class="order-btn" title="회원전용(멤버십) 영상을 목록에서 제외합니다">제외</button>
-              <button id="membership-show-btn" class="order-btn" title="모든 영상(회원전용 포함)을 목록에 표시합니다">포함</button>
-            </div>
+            <button id="membership-hide-btn" class="order-btn" title="회원전용(멤버십) 영상을 목록에서 제외합니다">제외</button>
+            <button id="membership-show-btn" class="order-btn" title="모든 영상(회원전용 포함)을 목록에 표시합니다">포함</button>
           </div>
           <div class="toolbar-right-group">
-            <button id="scroll-to-current-btn" class="order-btn" title="현재 재생 중인 영상으로 이동">📍 현재영상</button>
+            <button id="scroll-to-current-btn" class="order-btn" title="현재 재생 중인 영상으로 이동">📍 현재</button>
             <button id="sync-latest-btn" class="order-btn" title="이 채널의 최신 업로드 영상 동기화">🔄 최신</button>
           </div>
         </div>
