@@ -1857,12 +1857,14 @@
       localStorage.setItem("watched_videos", JSON.stringify(Array.from(watchedSet)));
     }
 
+    const isLocalServer = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
     function saveChannels() {
       localStorage.setItem("binge_channels", JSON.stringify(channels));
       if (currentChannel && currentChannel.id) {
         localStorage.setItem("binge_current_channel_id", currentChannel.id);
       }
-      if (window.location.protocol.startsWith("http")) {
+      if (isLocalServer && window.location.protocol.startsWith("http")) {
         fetch("/api/channels", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -3824,8 +3826,8 @@
         }
       }, 200);
     }
-    // 4. Background sync channels from server if available
-    if (window.location.protocol.startsWith("http")) {
+    // 4. Background sync channels from server if running locally
+    if (isLocalServer && window.location.protocol.startsWith("http")) {
       fetch("/api/channels")
         .then(r => r.json())
         .then(res => {
