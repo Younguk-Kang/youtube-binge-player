@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <title>유튜브 채널 정주행 플레이어 - 첫 영상부터 연속 재생</title>
-  <meta name="description" content="유튜브 채널의 모든 동영상을 1화부터 최신순/과거순으로 편리하게 정주행(연속재생)할 수 있는 유튜브 전용 웹 플레이어입니다. 이어보기, 배속, 화질, 자막, 멤버십 필터 완벽 지원.">
+  <title>유튜브 채널 정주행 플레이어 - YouTube Binge Player</title>
+  <meta name="description" content="유튜브 채널의 모든 동영상을 1화부터 최신순/과거순으로 편리하게 정주행(연속재생)할 수 있는 웹 플레이어입니다. Binge-watch and autoplay YouTube channel videos in chronological order from the very first upload.">
   <meta name="keywords" content="유튜브 정주행, 유튜브 연속재생, 유튜브 1화부터, 유튜브 채널 플레이어, 유튜브 몰아보기, 유튜브 자동재생, 유튜브 재생목록, youtube binge, youtube binge player, youtube channel player, youtube playlist player">
   <meta name="author" content="YouTube Binge Player">
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
@@ -17,15 +17,15 @@
   <!-- Open Graph (카카오톡, 네이버, 페이스북 공유 미리보기) -->
   <meta property="og:type" content="website">
   <meta property="og:locale" content="ko_KR">
-  <meta property="og:site_name" content="유튜브 정주행 플레이어">
+  <meta property="og:site_name" content="유튜브 정주행 플레이어 (YouTube Binge Player)">
   <meta property="og:url" content="https://youtube-binge-player.onrender.com/">
-  <meta property="og:title" content="유튜브 채널 정주행 플레이어 - 첫 영상부터 연속 재생">
-  <meta property="og:description" content="유튜브 채널의 모든 영상을 1화부터 간편하게 정주행! 이어보기, 배속, 멤버십 필터링까지 완벽 지원.">
+  <meta property="og:title" content="유튜브 채널 정주행 플레이어 - YouTube Binge Player">
+  <meta property="og:description" content="유튜브 채널의 모든 영상을 1화부터 연속 재생! Binge-watch YouTube channel videos seamlessly from the first upload.">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="유튜브 채널 정주행 플레이어">
-  <meta name="twitter:description" content="유튜브 채널의 모든 영상을 1화부터 간편하게 연속 재생하세요.">
+  <meta name="twitter:title" content="유튜브 채널 정주행 플레이어 - YouTube Binge Player">
+  <meta name="twitter:description" content="유튜브 채널의 모든 영상을 1화부터 연속 재생! Binge-watch YouTube channel videos in order.">
 
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
@@ -35,10 +35,11 @@
   {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    "name": "유튜브 정주행 플레이어",
+    "name": "유튜브 정주행 플레이어 (YouTube Binge Player)",
+    "alternateName": "YouTube Binge Player",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "All",
-    "description": "유튜브 채널의 모든 동영상을 첫 영상부터 최신순/과거순으로 정주행(연속 재생)할 수 있는 웹 플레이어",
+    "description": "유튜브 채널의 모든 동영상을 첫 영상부터 정주행(연속 재생)할 수 있는 웹 플레이어 / Continuous YouTube channel video player for binge-watching in chronological order.",
     "offers": {
       "@type": "Offer",
       "price": "0",
@@ -2730,7 +2731,7 @@
         document.title = `${displayNumber}. ${currentVideo.title} - 정주행`;
       } else if (!currentChannel || channels.length === 0) {
         currentTitleEl.innerText = "채널을 추가해 주세요";
-        document.title = "유튜브 정주행 플레이어";
+        document.title = "유튜브 채널 정주행 플레이어 - YouTube Binge Player";
       }
     }
 
