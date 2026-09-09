@@ -1695,11 +1695,12 @@
   <script src="https://www.youtube.com/iframe_api"></script>
 
   <script>
-    // Clean initial state: no hardcoded default channels
-    if (!localStorage.getItem("binge_channels_clean_v2")) {
+    // Clean initial state: no hardcoded default channels and subtitles off by default
+    if (!localStorage.getItem("binge_channels_clean_v3")) {
       localStorage.removeItem("binge_channels");
       localStorage.removeItem("binge_current_channel_id");
-      localStorage.setItem("binge_channels_clean_v2", "true");
+      localStorage.setItem("yt_subtitles_enabled", "false");
+      localStorage.setItem("binge_channels_clean_v3", "true");
     }
 
     function getChannelId(ch) {
@@ -2360,7 +2361,7 @@
         if (typeof player.playVideo === "function") {
           player.playVideo();
         }
-        if (isSubtitlesEnabled && typeof applySubtitlesState === "function") {
+        if (typeof applySubtitlesState === "function") {
           setTimeout(() => applySubtitlesState(), 350);
         }
       } else {
@@ -2464,10 +2465,11 @@
           }
         } else {
           if (typeof player.setOption === "function") {
-            player.setOption("captions", "track", {});
+            try { player.setOption("captions", "track", {}); } catch(e) {}
           }
           if (typeof player.unloadModule === "function") {
-            player.unloadModule("captions");
+            try { player.unloadModule("captions"); } catch(e) {}
+            try { player.unloadModule("cc"); } catch(e) {}
           }
         }
       } catch (e) {}
@@ -2558,9 +2560,7 @@
                 }
               }
 
-              if (isSubtitlesEnabled) {
-                applySubtitlesState();
-              }
+              applySubtitlesState();
               updateSubtitlesButton();
             },
             'onPlaybackQualityChange': function(event) {
@@ -2571,9 +2571,8 @@
                 if (playPauseBtn) playPauseBtn.innerText = '⏸';
                 applyPreferredQuality();
                 updateQualityOptions();
-                if (isSubtitlesEnabled) {
-                  applySubtitlesState();
-                }
+                applySubtitlesState();
+                setTimeout(applySubtitlesState, 500);
               }
 
               if (event.data === YT.PlayerState.PAUSED) {
