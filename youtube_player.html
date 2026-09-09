@@ -592,6 +592,12 @@
       background: #ffffff;
       border-color: #ffffff;
     }
+    #subtitles-btn.active {
+      background: #ffffff;
+      color: #111111;
+      border-color: #ffffff;
+      font-weight: 700;
+    }
 
     .volume-container {
       display: flex;
@@ -1539,6 +1545,9 @@
                   <option value="2">2.0x</option>
                 </select>
 
+                <!-- Subtitles Toggle Button -->
+                <button id="subtitles-btn" class="ctrl-btn" title="자막 켜기/끄기 (단축키: C)">💬 자막</button>
+
                 <button id="toggle-watched-btn" class="ctrl-btn" title="시청 완료 체크">✓ 완료</button>
                 <button id="clear-watched-btn" class="ctrl-btn subtle-btn" title="모든 시청 완료(✓) 기록 초기화" style="color:#888; font-size:11px;">초기화</button>
 
@@ -2350,6 +2359,9 @@
         if (typeof player.playVideo === "function") {
           player.playVideo();
         }
+        if (isSubtitlesEnabled && typeof applySubtitlesState === "function") {
+          setTimeout(() => applySubtitlesState(), 350);
+        }
       } else {
         pendingVideoId = video.id;
         if (typeof window.initPlayer === "function") {
@@ -2413,6 +2425,61 @@
       }
     }
 
+    // Subtitles (CC) State & Controller
+    let isSubtitlesEnabled = localStorage.getItem("yt_subtitles_enabled") === "true";
+
+    function updateSubtitlesButton() {
+      const btn = document.getElementById("subtitles-btn");
+      if (!btn) return;
+      if (isSubtitlesEnabled) {
+        btn.classList.add("active");
+        btn.title = "자막 끄기 (단축키: C)";
+      } else {
+        btn.classList.remove("active");
+        btn.title = "자막 켜기 (단축키: C)";
+      }
+    }
+
+    function applySubtitlesState() {
+      if (!player) return;
+      try {
+        if (isSubtitlesEnabled) {
+          if (typeof player.loadModule === "function") {
+            player.loadModule("captions");
+          }
+          if (typeof player.setOption === "function") {
+            try {
+              const tracklist = (typeof player.getOption === "function") ? player.getOption("captions", "tracklist") : null;
+              if (Array.isArray(tracklist) && tracklist.length > 0) {
+                const koTrack = tracklist.find(t => t.languageCode === "ko") || tracklist[0];
+                player.setOption("captions", "track", { languageCode: koTrack.languageCode });
+              } else {
+                player.setOption("captions", "track", { languageCode: "ko" });
+              }
+            } catch(e) {
+              player.setOption("captions", "track", { languageCode: "ko" });
+            }
+            player.setOption("captions", "reload", true);
+          }
+        } else {
+          if (typeof player.setOption === "function") {
+            player.setOption("captions", "track", {});
+          }
+          if (typeof player.unloadModule === "function") {
+            player.unloadModule("captions");
+          }
+        }
+      } catch (e) {}
+      updateSubtitlesButton();
+    }
+
+    function toggleSubtitles() {
+      isSubtitlesEnabled = !isSubtitlesEnabled;
+      localStorage.setItem("yt_subtitles_enabled", isSubtitlesEnabled ? "true" : "false");
+      applySubtitlesState();
+      showToast(isSubtitlesEnabled ? "💬 자막 켜짐" : "💬 자막 꺼짐", 1500);
+    }
+
     // YouTube API Hook
     let progressCheckTimer = null;
     let isInitializingPlayer = false;
@@ -2442,6 +2509,8 @@
             iv_load_policy: 3,
             modestbranding: 1,
             playsinline: 1,
+            cc_load_policy: isSubtitlesEnabled ? 1 : 0,
+            cc_lang_pref: 'ko',
             origin: window.location.origin
           },
           events: {
@@ -2487,6 +2556,11 @@
                   showToast(`⏱️ ${formatTime(startSec)} 지점부터 이어봅니다`, 2200);
                 }
               }
+
+              if (isSubtitlesEnabled) {
+                applySubtitlesState();
+              }
+              updateSubtitlesButton();
             },
             'onPlaybackQualityChange': function(event) {
               updateQualityOptions();
@@ -2496,6 +2570,9 @@
                 if (playPauseBtn) playPauseBtn.innerText = '⏸';
                 applyPreferredQuality();
                 updateQualityOptions();
+                if (isSubtitlesEnabled) {
+                  applySubtitlesState();
+                }
               }
 
               if (event.data === YT.PlayerState.PAUSED) {
@@ -2540,6 +2617,12 @@
     }
     window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
     window.initPlayer = initPlayer;
+
+    const subtitlesBtn = document.getElementById("subtitles-btn");
+    if (subtitlesBtn) {
+      subtitlesBtn.addEventListener("click", toggleSubtitles);
+      updateSubtitlesButton();
+    }
 
     errorSkipBtn.addEventListener("click", () => {
       if (currentIndex + 1 < displayList.length) {
@@ -3318,6 +3401,9 @@
       if (e.code === "Space" || e.key === "k" || e.key === "K") {
         e.preventDefault();
         togglePlayPause();
+      } else if (e.key === "c" || e.key === "C") {
+        e.preventDefault();
+        toggleSubtitles();
       } else if (e.key === "j" || e.key === "J") {
         if (isPlayerReady && player) {
           const t = player.getCurrentTime();
