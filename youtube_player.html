@@ -991,7 +991,7 @@
       gap: 4px;
     }
 
-    .order-toggle {
+    .order-toggle, .membership-toggle {
       display: flex;
       background: #181818;
       border-radius: 6px;
@@ -1617,8 +1617,11 @@
             <button id="order-desc" class="order-btn" title="최신 순">최신순</button>
             <button id="order-asc" class="order-btn" title="오래된 순(정주행 추천)">정주행</button>
           </div>
+          <div class="membership-toggle">
+            <button id="membership-hide-btn" class="order-btn" title="회원전용(멤버십) 영상을 목록에서 제외합니다">🔒 멤버십제외</button>
+            <button id="membership-show-btn" class="order-btn" title="모든 영상(회원전용 포함)을 목록에 표시합니다">🔓 멤버십포함</button>
+          </div>
           <div class="toolbar-right-group">
-            <button id="filter-membership-btn" class="order-btn" title="회원전용(멤버십) 영상 제외/포함 토글">🔒 멤버십제외</button>
             <button id="scroll-to-current-btn" class="order-btn" title="현재 재생 중인 영상으로 이동">📍 현재영상</button>
             <button id="sync-latest-btn" class="order-btn" title="이 채널의 최신 업로드 영상 동기화">🔄 최신</button>
           </div>
@@ -1707,29 +1710,27 @@
 
     function isMembersOnlyVideo(video) {
       if (!video) return false;
-      if (video.isMembersOnly === true) return true;
+      if (video.isMembersOnly === true || video.isMembersOnly === "true") return true;
       const t = (video.title || "").toLowerCase();
       const kwList = [
         "[멤버십", "[맴버십", "(멤버십", "(맴버십",
         "멤버십", "맴버십",
         "[회원전용", "(회원전용", "[회원 전용", "(회원 전용",
         "멤버십 전용", "맴버십 전용", "회원 전용", "회원전용",
-        "members only", "member-only"
+        "members only", "member-only", "members-only", "가입자 전용"
       ];
       return kwList.some(kw => t.includes(kw));
     }
 
-    function updateMembershipFilterButton() {
-      const btn = document.getElementById("filter-membership-btn");
-      if (!btn) return;
+    function updateMembershipFilterButtons() {
+      const hideBtn = document.getElementById("membership-hide-btn");
+      const showBtn = document.getElementById("membership-show-btn");
       if (isHideMembersOnly) {
-        btn.classList.add("active");
-        btn.innerText = "🔒 멤버십제외";
-        btn.title = "회원전용(멤버십) 영상이 목록에서 제외된 상태입니다 (클릭 시 포함)";
+        if (hideBtn) hideBtn.classList.add("active");
+        if (showBtn) showBtn.classList.remove("active");
       } else {
-        btn.classList.remove("active");
-        btn.innerText = "🔓 멤버십포함";
-        btn.title = "모든 영상(회원전용 포함)이 표시 중입니다 (클릭 시 회원전용 제외)";
+        if (hideBtn) hideBtn.classList.remove("active");
+        if (showBtn) showBtn.classList.add("active");
       }
     }
 
@@ -2557,20 +2558,32 @@
       updateCurrentPlayingTitle();
     });
 
-    const filterMembershipBtn = document.getElementById("filter-membership-btn");
-    if (filterMembershipBtn) {
-      filterMembershipBtn.addEventListener("click", function() {
-        isHideMembersOnly = !isHideMembersOnly;
-        localStorage.setItem("binge_hide_members", isHideMembersOnly ? "true" : "false");
-        updateMembershipFilterButton();
+    const membershipHideBtn = document.getElementById("membership-hide-btn");
+    const membershipShowBtn = document.getElementById("membership-show-btn");
+
+    if (membershipHideBtn) {
+      membershipHideBtn.addEventListener("click", function() {
+        if (isHideMembersOnly) return;
+        isHideMembersOnly = true;
+        localStorage.setItem("binge_hide_members", "true");
+        updateMembershipFilterButtons();
         prepareList(true);
         updateResumeBanner();
         updateCurrentPlayingTitle();
-        if (isHideMembersOnly) {
-          showToast("🔒 회원전용(멤버십) 영상을 목록에서 제외했습니다.");
-        } else {
-          showToast("🔓 회원전용(멤버십) 영상을 목록에 포함했습니다.");
-        }
+        showToast("🔒 회원전용(멤버십) 영상을 목록에서 제외했습니다.");
+      });
+    }
+
+    if (membershipShowBtn) {
+      membershipShowBtn.addEventListener("click", function() {
+        if (!isHideMembersOnly) return;
+        isHideMembersOnly = false;
+        localStorage.setItem("binge_hide_members", "false");
+        updateMembershipFilterButtons();
+        prepareList(true);
+        updateResumeBanner();
+        updateCurrentPlayingTitle();
+        showToast("🔓 회원전용(멤버십) 영상을 목록에 포함했습니다.");
       });
     }
 
@@ -3544,7 +3557,7 @@
 
     // Initialize UI
     updateOrderButtons();
-    updateMembershipFilterButton();
+    updateMembershipFilterButtons();
     updateChannelDropdown();
     let savedScreenMode = localStorage.getItem("binge_screen_mode");
     if (savedScreenMode === "normal") {

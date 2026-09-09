@@ -153,6 +153,51 @@ def search_channel_by_keyword(query):
         print(f"[SEARCH] Error searching channel for '{query}': {e}", flush=True)
         return None
 
+def check_item_members_only(item_obj, title=""):
+    # 1. Check title keywords
+    t_low = (title or "").lower()
+    title_kws = [
+        "[멤버십", "[맴버십", "(멤버십", "(맴버십",
+        "멤버십", "맴버십",
+        "[회원전용", "(회원전용", "[회원 전용", "(회원 전용",
+        "멤버십 전용", "맴버십 전용", "회원 전용", "회원전용",
+        "members only", "member-only", "members-only",
+        "가입자 전용", "가입자전용"
+    ]
+    if any(kw in t_low for kw in title_kws):
+        return True
+
+    # 2. Deep scan serialized item JSON for YouTube membership badges and styles
+    if isinstance(item_obj, (dict, list)):
+        try:
+            raw_json = json.dumps(item_obj, ensure_ascii=False)
+            if title:
+                raw_json = raw_json.replace(title, "")
+            raw_low = raw_json.lower()
+
+            membership_tokens = [
+                "badge_style_type_members_only",
+                "sponsorships",
+                "members_only",
+                "회원 전용",
+                "회원전용",
+                "members only",
+                "member-only",
+                "members-only",
+                "가입자 전용",
+                "가입자전용",
+                "채널 회원",
+                "채널에 가입하여",
+                "join this channel to get access",
+                "join this channel"
+            ]
+            if any(token in raw_low for token in membership_tokens):
+                return True
+        except Exception:
+            pass
+
+    return False
+
 def search_youtube_channels(query, limit=8):
     if not query or not query.strip():
         return []
@@ -344,14 +389,23 @@ def fetch_youtube_channel(channel_input, force=False):
     def parse_item(item):
         lvm = item.get("content", {}).get("lockupViewModel", {})
         vid = lvm.get("contentId")
+        title = ""
+        meta = {}
+        if vid:
+            meta = lvm.get("metadata", {}).get("lockupMetadataViewModel", {})
+            title = meta.get("title", {}).get("content", "")
+        else:
+            vr = item.get("content", {}).get("videoRenderer", {}) or item.get("videoRenderer", {})
+            vid = vr.get("videoId")
+            if vid:
+                title = vr.get("title", {}).get("runs", [{}])[0].get("text", "") or vr.get("title", {}).get("simpleText", "")
+
         if not vid or vid in seen: return None
         seen.add(vid)
-        meta = lvm.get("metadata", {}).get("lockupMetadataViewModel", {})
-        title = meta.get("title", {}).get("content", "")
+
         duration = ""
         views = ""
         upload_date = ""
-        is_members = False
         try:
             m_rows = meta.get("metadata", {}).get("contentMetadataViewModel", {}).get("metadataRows", [])
             for r in m_rows:
@@ -359,8 +413,6 @@ def fetch_youtube_channel(channel_input, force=False):
                     t = p.get("text", {}).get("content", "")
                     if "조회수" in t: views = t
                     elif "전" in t or "." in t: upload_date = t
-                    if any(k in t for k in ["회원", "멤버십", "맴버십", "members"]):
-                        is_members = True
         except Exception: pass
         try:
             badges = lvm.get("contentImage", {}).get("thumbnailViewModel", {}).get("overlays", [])
@@ -368,13 +420,9 @@ def fetch_youtube_channel(channel_input, force=False):
                 for subb in b.get("thumbnailBottomOverlayViewModel", {}).get("badges", []):
                     t = subb.get("thumbnailBadgeViewModel", {}).get("text", "")
                     if ":" in t: duration = t
-                    if any(k in t for k in ["회원", "멤버십", "맴버십", "members"]):
-                        is_members = True
         except Exception: pass
 
-        t_low = title.lower()
-        if any(kw in t_low for kw in ["[멤버십", "[맴버십", "(멤버십", "(맴버십", "멤버십", "맴버십", "[회원전용", "(회원전용", "[회원 전용", "(회원 전용", "멤버십 전용", "맴버십 전용", "회원 전용", "회원전용", "members only", "member-only"]):
-            is_members = True
+        is_members = check_item_members_only(item, title)
 
         return {"id": vid, "title": title, "duration": duration, "views": views, "uploadDate": upload_date, "isMembersOnly": is_members}
 
@@ -651,35 +699,7 @@ class PlayerHandler(http.server.SimpleHTTPRequestHandler):
                     duration = ""
                     views = ""
                     upload_date = ""
-                    is_members = False
-                    try:
-                        m_rows = meta.get("metadata", {}).get("contentMetadataViewModel", {}).get("metadataRows", [])
-                        for r in m_rows:
-                            for p in r.get("metadataParts", []):
-                                t = p.get("text", {}).get("content", "")
-                                if "조회수" in t:
-                                    views = t
-                                elif "전" in t or "." in t:
-                                    upload_date = t
-                                if any(k in t for k in ["회원", "멤버십", "맴버십", "members"]):
-                                    is_members = True
-                    except Exception:
-                        pass
-                    try:
-                        badges = lvm.get("contentImage", {}).get("thumbnailViewModel", {}).get("overlays", [])
-                        for b in badges:
-                            for subb in b.get("thumbnailBottomOverlayViewModel", {}).get("badges", []):
-                                t = subb.get("thumbnailBadgeViewModel", {}).get("text", "")
-                                if ":" in t:
-                                    duration = t
-                                if any(k in t for k in ["회원", "멤버십", "맴버십", "members"]):
-                                    is_members = True
-                    except Exception:
-                        pass
-
-                    t_low = title.lower()
-                    if any(kw in t_low for kw in ["[멤버십", "[맴버십", "(멤버십", "(맴버십", "멤버십", "맴버십", "[회원전용", "(회원전용", "[회원 전용", "(회원 전용", "멤버십 전용", "맴버십 전용", "회원 전용", "회원전용", "members only", "member-only"]):
-                        is_members = True
+                    is_members = check_item_members_only(lvm, title)
 
                     if vid and title:
                         v_obj = {
