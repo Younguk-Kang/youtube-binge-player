@@ -504,6 +504,34 @@ class PlayerHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             return
 
+        if parsed.path == "/robots.txt":
+            robots_file = os.path.join(DIRECTORY, "robots.txt")
+            if os.path.exists(robots_file):
+                with open(robots_file, "rb") as f:
+                    content = f.read()
+            else:
+                content = b"User-agent: *\nAllow: /\nSitemap: /sitemap.xml\n"
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(content)))
+            self.end_headers()
+            self.wfile.write(content)
+            return
+
+        if parsed.path == "/sitemap.xml":
+            sitemap_file = os.path.join(DIRECTORY, "sitemap.xml")
+            if os.path.exists(sitemap_file):
+                with open(sitemap_file, "rb") as f:
+                    content = f.read()
+            else:
+                content = b'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url>\n    <loc>/</loc>\n    <priority>1.0</priority>\n  </url>\n</urlset>'
+            self.send_response(200)
+            self.send_header("Content-Type", "application/xml; charset=utf-8")
+            self.send_header("Content-Length", str(len(content)))
+            self.end_headers()
+            self.wfile.write(content)
+            return
+
         if parsed.path == "/" or parsed.path == "":
             self.send_response(302)
             self.send_header("Location", "/youtube_player.html")
