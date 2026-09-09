@@ -851,7 +851,7 @@
 
     /* Sidebar */
     .list-section {
-      width: 350px;
+      width: 370px;
       min-width: 240px;
       max-width: 650px;
       background-color: var(--card-bg);
@@ -1018,20 +1018,20 @@
     }
 
     .membership-label {
-      font-size: 10px;
+      font-size: 11.5px;
       font-weight: 600;
-      color: #aaa;
+      color: #bbb;
       white-space: nowrap;
       user-select: none;
-      padding: 0 2px 0 4px;
+      padding: 0 4px 0 5px;
     }
 
     .order-btn {
       background: transparent;
       border: none;
       color: var(--text-muted);
-      padding: 2px 5.5px;
-      font-size: 10px;
+      padding: 2.5px 6.5px;
+      font-size: 11.5px;
       border-radius: 4px;
       cursor: pointer;
       white-space: nowrap;
@@ -1054,8 +1054,8 @@
       background: #1a1a1a;
       border: 1.5px solid #3c3c3c;
       color: #bbb;
-      padding: 2px 5.5px;
-      font-size: 10px;
+      padding: 2.5px 6.5px;
+      font-size: 11.5px;
       border-radius: 5px;
     }
 
@@ -1635,17 +1635,17 @@
         <!-- Filter & Quick Action Buttons -->
         <div class="toolbar-actions">
           <div class="order-toggle">
-            <button id="order-desc" class="order-btn" title="최신 순">최신</button>
-            <button id="order-asc" class="order-btn" title="오래된 순(정주행 추천)">정주행</button>
+            <button id="order-desc" class="order-btn" title="최신 순으로 정렬">최신순</button>
+            <button id="order-asc" class="order-btn" title="오래된 순으로 정렬 (정주행)">정주행</button>
           </div>
           <div class="membership-toggle" title="회원전용(멤버십) 영상 필터">
-            <span class="membership-label">🔒 멤버십</span>
+            <span class="membership-label">멤버십</span>
             <button id="membership-hide-btn" class="order-btn" title="회원전용(멤버십) 영상을 목록에서 제외합니다">제외</button>
             <button id="membership-show-btn" class="order-btn" title="모든 영상(회원전용 포함)을 목록에 표시합니다">포함</button>
           </div>
           <div class="toolbar-right-group">
-            <button id="scroll-to-current-btn" class="order-btn" title="현재 재생 중인 영상으로 이동">📍 현재</button>
-            <button id="sync-latest-btn" class="order-btn" title="이 채널의 최신 업로드 영상 동기화">🔄 최신</button>
+            <button id="scroll-to-current-btn" class="order-btn" title="현재 재생 중인 영상으로 이동">현재영상</button>
+            <button id="sync-latest-btn" class="order-btn" title="이 채널의 최신 업로드 영상 새로고침">새로고침</button>
           </div>
         </div>
       </div>
@@ -2848,7 +2848,7 @@
         document.body.classList.remove("mode-max");
         sidebar.classList.remove("hidden", "revealed");
         const savedW = localStorage.getItem("binge_sidebar_width");
-        sidebar.style.width = savedW || "340px";
+        sidebar.style.width = (savedW && parseInt(savedW, 10) >= 360) ? savedW : "370px";
         resizer.style.display = "block";
         if (modeLarge) modeLarge.classList.add("active");
       } else if (mode === "max") {
@@ -3673,7 +3673,7 @@
       if (!currentChannel || !currentChannel.id || isSyncing) return;
       isSyncing = true;
       const syncBtn = document.getElementById("sync-latest-btn");
-      if (syncBtn) syncBtn.innerText = "🔄 동기화중";
+      if (syncBtn) syncBtn.innerText = "새로고침중";
 
       try {
         const resp = await fetch(`/api/sync_latest_videos?channel_id=${encodeURIComponent(currentChannel.id)}`);
@@ -3714,7 +3714,7 @@
         if (!silent) showToast("서버 연결 실패", 2000);
       } finally {
         isSyncing = false;
-        if (syncBtn) syncBtn.innerText = "🔄 최신";
+        if (syncBtn) syncBtn.innerText = "새로고침";
       }
     }
 
