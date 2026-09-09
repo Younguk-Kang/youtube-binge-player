@@ -1732,13 +1732,16 @@
     function isMembersOnlyVideo(video) {
       if (!video) return false;
       if (video.isMembersOnly === true || video.isMembersOnly === "true") return true;
+      // 유튜브는 비로그인/공개 피드에서 멤버십(회원전용) 동영상의 조회수(views)를 비워두거나 제공하지 않습니다.
+      if (!video.views || video.views.trim() === "" || video.views === "조회수 정보 없음") return true;
       const t = (video.title || "").toLowerCase();
       const kwList = [
         "[멤버십", "[맴버십", "(멤버십", "(맴버십",
         "멤버십", "맴버십",
         "[회원전용", "(회원전용", "[회원 전용", "(회원 전용",
         "멤버십 전용", "맴버십 전용", "회원 전용", "회원전용",
-        "members only", "member-only", "members-only", "가입자 전용"
+        "members only", "member-only", "members-only", "가입자 전용", "가입자전용",
+        "무삭제", "노모", "손질영상", "손질 영상", "미공개", "비하인드"
       ];
       return kwList.some(kw => t.includes(kw));
     }
