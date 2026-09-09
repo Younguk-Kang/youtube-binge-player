@@ -2385,26 +2385,35 @@
       const startSec = getVideoPosition(video.id);
 
       if (isPlayerReady && player && typeof player.loadVideoById === "function") {
-        if (startSec > 5) {
-          player.loadVideoById({
-            videoId: video.id,
-            startSeconds: startSec
-          });
-          showToast(`⏱️ ${formatTime(startSec)} 지점부터 이어봅니다`, 2200);
-        } else {
-          player.loadVideoById(video.id);
-        }
+        try {
+          if (startSec > 5) {
+            player.loadVideoById({
+              videoId: video.id,
+              startSeconds: startSec
+            });
+            showToast(`⏱️ ${formatTime(startSec)} 지점부터 이어봅니다`, 2200);
+          } else {
+            player.loadVideoById(video.id);
+          }
 
-        const sp = parseFloat(speedSelect.value) || 1;
-        if (typeof player.setPlaybackRate === "function") {
-          player.setPlaybackRate(sp);
-        }
+          const sp = parseFloat(speedSelect.value) || 1;
+          if (typeof player.setPlaybackRate === "function") {
+            player.setPlaybackRate(sp);
+          }
 
-        if (typeof player.playVideo === "function") {
-          player.playVideo();
-        }
-        if (typeof applySubtitlesState === "function") {
-          setTimeout(() => applySubtitlesState(), 350);
+          if (typeof player.playVideo === "function") {
+            player.playVideo();
+          }
+          if (typeof applySubtitlesState === "function") {
+            setTimeout(() => applySubtitlesState(), 350);
+          }
+        } catch(e) {
+          console.warn("loadVideoById failed, re-initializing:", e);
+          isPlayerReady = false;
+          pendingVideoId = video.id;
+          if (typeof window.initPlayer === "function") {
+            window.initPlayer();
+          }
         }
       } else {
         pendingVideoId = video.id;
@@ -2537,16 +2546,28 @@
       const iframeTarget = document.getElementById('yt-iframe');
       if (!iframeTarget) return;
 
-      isInitializingPlayer = true;
       const initialVideo = (displayList && displayList[currentIndex]) || null;
       const initialVideoId = pendingVideoId || (initialVideo ? initialVideo.id : "");
+      if (!initialVideoId) {
+        // No video to load yet (empty channel list) - wait until a channel is added
+        return;
+      }
+
+      isInitializingPlayer = true;
       const startSec = initialVideoId ? getVideoPosition(initialVideoId) : 0;
+
+      // Watchdog: safety timeout to prevent getting stuck in isInitializingPlayer
+      setTimeout(() => {
+        if (!isPlayerReady) {
+          isInitializingPlayer = false;
+        }
+      }, 6000);
 
       try {
         player = new YT.Player('yt-iframe', {
           height: '100%',
           width: '100%',
-          videoId: initialVideoId || undefined,
+          videoId: initialVideoId,
           playerVars: {
             enablejsapi: 1,
             controls: 0,
@@ -2554,6 +2575,7 @@
             iv_load_policy: 3,
             modestbranding: 1,
             playsinline: 1,
+            autoplay: 1,
             cc_load_policy: isSubtitlesEnabled ? 1 : 0,
             cc_lang_pref: 'ko',
             origin: window.location.origin
@@ -2583,22 +2605,24 @@
               const sp = parseFloat(speedSelect.value) || 1;
               if (player && player.setPlaybackRate) player.setPlaybackRate(sp);
 
-              if (pendingVideoId) {
-                const pos = getVideoPosition(pendingVideoId);
+              const targetVid = pendingVideoId || initialVideoId;
+              pendingVideoId = null;
+              if (targetVid) {
+                const pos = getVideoPosition(targetVid);
                 if (pos > 5) {
-                  player.loadVideoById({ videoId: pendingVideoId, startSeconds: pos });
+                  if (typeof player.loadVideoById === "function") {
+                    player.loadVideoById({ videoId: targetVid, startSeconds: pos });
+                  } else if (typeof player.seekTo === "function") {
+                    player.seekTo(pos, true);
+                  }
                   showToast(`⏱️ ${formatTime(pos)} 지점부터 이어봅니다`, 2200);
-                } else {
-                  player.loadVideoById(pendingVideoId);
+                } else if (targetVid !== initialVideoId) {
+                  if (typeof player.loadVideoById === "function") {
+                    player.loadVideoById(targetVid);
+                  }
                 }
                 if (typeof player.playVideo === "function") {
                   player.playVideo();
-                }
-                pendingVideoId = null;
-              } else if (initialVideoId && startSec > 5) {
-                if (typeof player.seekTo === "function") {
-                  player.seekTo(startSec, true);
-                  showToast(`⏱️ ${formatTime(startSec)} 지점부터 이어봅니다`, 2200);
                 }
               }
 
@@ -2641,6 +2665,7 @@
               }
             },
             'onError': function(event) {
+              isInitializingPlayer = false;
               const video = displayList[currentIndex];
               if (video) {
                 errorYtLink.href = `https://www.youtube.com/watch?v=${video.id}`;
