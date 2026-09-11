@@ -1529,18 +1529,32 @@
 
     /* Responsive & Polish for Mobile */
     @media (max-width: 768px) {
+      body.mode-max .main-container,
+      body .main-container,
       .main-container {
         flex-direction: column !important;
         height: 100vh !important;
         height: 100dvh !important;
+        width: 100% !important;
+        max-width: 100% !important;
         overflow: hidden !important;
       }
+      body.mode-max .resizer,
+      body .resizer,
       .resizer {
         display: none !important;
       }
+      body.mode-max .float-list-btn,
+      body .float-list-btn,
       .float-list-btn {
         display: none !important;
       }
+      body.mode-max .right-edge-trigger,
+      .right-edge-trigger {
+        display: none !important;
+      }
+      body.mode-max .player-section,
+      body .player-section,
       .player-section {
         flex: 0 0 auto !important;
         width: 100% !important;
@@ -1552,6 +1566,8 @@
         height: auto !important;
         aspect-ratio: 16 / 9;
       }
+      body.mode-max .video-wrapper,
+      body .video-wrapper,
       .video-wrapper {
         width: 100% !important;
         height: 100% !important;
@@ -1563,7 +1579,7 @@
 
       /* Simplified Mobile Video Controls */
       .video-controls-overlay {
-        padding: 24px 10px 10px !important;
+        padding: 20px 8px 8px !important;
       }
       .volume-container {
         display: none !important;
@@ -1580,40 +1596,62 @@
         display: none !important;
       }
       .overlay-controls-row {
-        gap: 6px !important;
+        gap: 3px !important;
+        padding: 0 !important;
+        justify-content: space-between !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
       }
       .ctrl-group {
-        gap: 5px !important;
+        gap: 3px !important;
+        flex-wrap: nowrap !important;
+      }
+      .ctrl-left {
+        flex-shrink: 1 !important;
+        min-width: 0 !important;
+      }
+      .ctrl-right {
+        flex-shrink: 0 !important;
       }
       .ctrl-btn {
-        padding: 7px 9px !important;
-        font-size: 13px !important;
-        min-height: 36px !important;
-        min-width: 36px !important;
+        padding: 4px 6px !important;
+        font-size: 12px !important;
+        min-height: 32px !important;
+        min-width: 30px !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
+        border-radius: 6px !important;
       }
       #play-pause-btn {
-        font-size: 16px !important;
-        padding: 7px 11px !important;
-        min-width: 38px !important;
+        font-size: 14px !important;
+        padding: 4px 8px !important;
+        min-width: 34px !important;
       }
       #fullscreen-btn {
-        font-size: 16px !important;
-        padding: 7px 11px !important;
-        background: rgba(255, 255, 255, 0.18) !important;
+        font-size: 15px !important;
+        padding: 4px 8px !important;
+        min-width: 34px !important;
+        background: rgba(255, 255, 255, 0.22) !important;
         font-weight: bold !important;
-        border-color: rgba(255, 255, 255, 0.3) !important;
+        border-color: rgba(255, 255, 255, 0.4) !important;
+        flex-shrink: 0 !important;
+      }
+      #subtitles-btn {
+        font-size: 11px !important;
+        padding: 4px 5px !important;
+        letter-spacing: -0.3px !important;
       }
       .ctrl-select {
-        padding: 5px 6px !important;
-        font-size: 12px !important;
-        height: 36px !important;
+        padding: 3px 4px !important;
+        font-size: 11px !important;
+        height: 32px !important;
       }
       .time-display {
-        font-size: 11px !important;
-        padding: 0 2px !important;
+        font-size: 10.5px !important;
+        padding: 0 1px !important;
+        letter-spacing: -0.4px !important;
+        white-space: nowrap !important;
       }
 
       /* Progress Bar Touch Scrubbing */
@@ -1627,16 +1665,34 @@
         transform: translate(-50%, -50%) scale(1) !important;
       }
 
-      /* Clean Sidebar (Playlist) on Mobile */
+      /* Clean Sidebar (Playlist) on Mobile - 100% visible & accessible under player */
+      body.mode-max .list-section,
+      body .list-section,
       .list-section {
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        transform: none !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+        z-index: 10 !important;
         flex: 1 1 auto !important;
         width: 100% !important;
+        max-width: 100% !important;
         height: auto !important;
         min-height: 0 !important;
         border-left: none !important;
         border-top: 1px solid var(--border-color) !important;
         display: flex !important;
         flex-direction: column !important;
+        background-color: var(--card-bg) !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        cursor: default !important;
       }
       #toggle-sidebar-btn {
         display: none !important;
@@ -1647,6 +1703,7 @@
       .sidebar-header {
         padding: 8px 10px 6px !important;
         gap: 5px !important;
+        flex-shrink: 0 !important;
       }
       .channel-select {
         font-size: 13px !important;
@@ -1660,6 +1717,7 @@
       .list-toolbar {
         padding: 6px 10px !important;
         gap: 6px !important;
+        flex-shrink: 0 !important;
       }
       .search-wrap {
         height: 36px !important;
@@ -3042,7 +3100,7 @@
 
     // Global mousemove for edge detection in mode-max
     window.addEventListener("mousemove", (e) => {
-      if (!document.body.classList.contains("mode-max")) return;
+      if (window.innerWidth <= 768 || !document.body.classList.contains("mode-max")) return;
 
       const winW = window.innerWidth;
       const mouseX = e.clientX;
@@ -3062,7 +3120,7 @@
     const playerSection = document.querySelector(".player-section");
     if (playerSection) {
       playerSection.addEventListener("click", () => {
-        if (document.body.classList.contains("mode-max")) {
+        if (window.innerWidth > 768 && document.body.classList.contains("mode-max")) {
           const activeEl = document.activeElement;
           if (activeEl && sidebar.contains(activeEl)) {
             activeEl.blur();
@@ -3073,6 +3131,10 @@
     }
 
     function setMode(mode, savePref = true) {
+      if (window.innerWidth <= 768) {
+        mode = "large";
+        savePref = false;
+      }
       if (mode === "normal") {
         mode = "large";
         try { localStorage.removeItem("binge_screen_mode"); } catch(e) {}
@@ -3087,9 +3149,14 @@
       if (mode === "large") {
         document.body.classList.remove("mode-max");
         sidebar.classList.remove("hidden", "revealed");
-        const savedW = localStorage.getItem("binge_sidebar_width");
-        sidebar.style.width = (savedW && parseInt(savedW, 10) >= 360) ? savedW : "370px";
-        resizer.style.display = "block";
+        if (window.innerWidth > 768) {
+          const savedW = localStorage.getItem("binge_sidebar_width");
+          sidebar.style.width = (savedW && parseInt(savedW, 10) >= 360) ? savedW : "370px";
+          resizer.style.display = "block";
+        } else {
+          sidebar.style.width = "";
+          resizer.style.display = "none";
+        }
         if (modeLarge) modeLarge.classList.add("active");
       } else if (mode === "max") {
         document.body.classList.add("mode-max");
@@ -4044,11 +4111,20 @@
     updateMembershipFilterButtons();
     updateChannelDropdown();
     let savedScreenMode = localStorage.getItem("binge_screen_mode");
-    if (savedScreenMode === "normal") {
+    if (window.innerWidth <= 768) {
+      savedScreenMode = "large";
+      document.body.classList.remove("mode-max");
+    } else if (savedScreenMode === "normal") {
       try { localStorage.removeItem("binge_screen_mode"); } catch(e) {}
       savedScreenMode = "large";
     }
     setMode(savedScreenMode || "large");
+
+    window.addEventListener("resize", () => {
+      if (window.innerWidth <= 768 && document.body.classList.contains("mode-max")) {
+        setMode("large", false);
+      }
+    });
 
     // 1. Prepare list directly (automatically matches last watched video by ID, respecting order & filters)
     prepareList(true);
