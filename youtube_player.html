@@ -624,17 +624,82 @@
     }
 
     .ctrl-btn.play-btn {
+      font-size: 12px;
+      padding: 5px 10px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      transition: all 0.16s ease;
+      cursor: pointer;
+    }
+    .ctrl-btn.play-btn .pp-icon {
+      font-size: 10.5px;
+      line-height: 1;
+    }
+    .ctrl-btn.play-btn .pp-text {
+      font-size: 11.5px;
+      letter-spacing: -0.3px;
+      line-height: 1;
+    }
+    .ctrl-btn.play-btn.is-paused {
+      background: rgba(255, 179, 0, 0.2) !important;
+      border: 1px solid rgba(255, 179, 0, 0.55) !important;
+      color: #ffca28 !important;
+      box-shadow: 0 0 12px rgba(255, 179, 0, 0.18);
+    }
+    .ctrl-btn.play-btn.is-paused:hover {
+      background: rgba(255, 179, 0, 0.3) !important;
+      border-color: rgba(255, 179, 0, 0.8) !important;
+      color: #ffd54f !important;
+    }
+    .ctrl-btn.play-btn.is-playing {
+      background: rgba(62, 166, 255, 0.2) !important;
+      border: 1px solid rgba(62, 166, 255, 0.5) !important;
+      color: #64b5f6 !important;
+    }
+    .ctrl-btn.play-btn.is-playing:hover {
+      background: rgba(62, 166, 255, 0.3) !important;
+      border-color: rgba(62, 166, 255, 0.75) !important;
+    }
+
+    /* Sleek Center Pause Badge on Video */
+    .center-pause-badge {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.92);
+      background: rgba(18, 18, 18, 0.78);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 8px 18px;
+      border-radius: 30px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 13.5px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+      box-shadow: 0 8px 26px rgba(0, 0, 0, 0.7);
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s;
+      z-index: 22;
+    }
+    .center-pause-badge .cpb-icon {
+      color: #ffca28;
       font-size: 13px;
-      padding: 5px 12px;
-      background: #e0e0e0;
-      border-color: #e0e0e0;
-      color: #111111;
-      font-weight: 700;
     }
-    .ctrl-btn.play-btn:hover {
-      background: #ffffff;
-      border-color: #ffffff;
+    .video-wrapper.is-paused .center-pause-badge {
+      opacity: 1;
+      visibility: visible;
+      transform: translate(-50%, -50%) scale(1);
     }
+
     #subtitles-btn.active {
       background: #ffffff;
       color: #111111;
@@ -1579,15 +1644,12 @@
 
       /* Simplified Mobile Video Controls */
       .video-controls-overlay {
-        padding: 20px 8px 8px !important;
+        padding: 16px 8px 8px !important;
       }
       .volume-container {
         display: none !important;
       }
       .video-title-text {
-        display: none !important;
-      }
-      #quality-select {
         display: none !important;
       }
       #toggle-watched-btn,
@@ -1601,9 +1663,13 @@
         justify-content: space-between !important;
         width: 100% !important;
         box-sizing: border-box !important;
+        display: flex !important;
+        align-items: center !important;
       }
       .ctrl-group {
         gap: 3px !important;
+        display: flex !important;
+        align-items: center !important;
         flex-wrap: nowrap !important;
       }
       .ctrl-left {
@@ -1614,24 +1680,41 @@
         flex-shrink: 0 !important;
       }
       .ctrl-btn {
-        padding: 4px 6px !important;
+        padding: 3px 5px !important;
         font-size: 12px !important;
-        min-height: 32px !important;
-        min-width: 30px !important;
+        min-height: 30px !important;
+        min-width: 28px !important;
+        height: 30px !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
         border-radius: 6px !important;
+        flex-shrink: 0 !important;
       }
       #play-pause-btn {
-        font-size: 14px !important;
-        padding: 4px 8px !important;
-        min-width: 34px !important;
+        padding: 3px 6px !important;
+        min-width: 44px !important;
+        height: 30px !important;
+        gap: 2px !important;
+      }
+      #play-pause-btn .pp-icon {
+        font-size: 10px !important;
+      }
+      #play-pause-btn .pp-text {
+        font-size: 11px !important;
+        font-weight: 700 !important;
+      }
+      #prev-btn, #next-btn {
+        padding: 3px 4px !important;
+        min-width: 26px !important;
+        height: 30px !important;
+        font-size: 12px !important;
       }
       #fullscreen-btn {
-        font-size: 15px !important;
-        padding: 4px 8px !important;
-        min-width: 34px !important;
+        font-size: 14px !important;
+        padding: 3px 6px !important;
+        min-width: 30px !important;
+        height: 30px !important;
         background: rgba(255, 255, 255, 0.22) !important;
         font-weight: bold !important;
         border-color: rgba(255, 255, 255, 0.4) !important;
@@ -1639,19 +1722,41 @@
       }
       #subtitles-btn {
         font-size: 11px !important;
-        padding: 4px 5px !important;
-        letter-spacing: -0.3px !important;
+        padding: 3px 5px !important;
+        height: 30px !important;
+        min-width: 28px !important;
+      }
+      #subtitles-btn .sub-text {
+        display: none !important;
       }
       .ctrl-select {
-        padding: 3px 4px !important;
+        padding: 2px 3px !important;
         font-size: 11px !important;
-        height: 32px !important;
+        height: 30px !important;
+        border-radius: 6px !important;
+        text-align: center !important;
+      }
+      #quality-select {
+        display: inline-flex !important;
+        min-width: 44px !important;
+        max-width: 58px !important;
+      }
+      #speed-select {
+        display: inline-flex !important;
+        min-width: 40px !important;
+        max-width: 46px !important;
       }
       .time-display {
-        font-size: 10.5px !important;
+        font-size: 10px !important;
         padding: 0 1px !important;
-        letter-spacing: -0.4px !important;
+        letter-spacing: -0.5px !important;
         white-space: nowrap !important;
+        color: rgba(255, 255, 255, 0.85) !important;
+        overflow: hidden !important;
+      }
+      .center-pause-badge {
+        padding: 6px 14px !important;
+        font-size: 12px !important;
       }
 
       /* Progress Bar Touch Scrubbing */
@@ -1766,6 +1871,10 @@
           <!-- Transparent Click Layer for Single-Click Play/Pause & Double-Click Fullscreen -->
           <div class="video-click-layer" id="video-click-layer">
             <div class="center-ripple" id="center-ripple">▶</div>
+            <div class="center-pause-badge" id="center-pause-badge">
+              <span class="cpb-icon">⏸</span>
+              <span class="cpb-text">일시정지</span>
+            </div>
           </div>
 
           <!-- Modern On-Screen Controls Overlay (Instant hide on mouseleave, 0s delay) -->
@@ -1781,7 +1890,9 @@
             <!-- Controls Row -->
             <div class="overlay-controls-row">
               <div class="ctrl-group ctrl-left">
-                <button id="play-pause-btn" class="ctrl-btn play-btn" title="재생/일시정지 (단축키: Space / K)">▶</button>
+                <button id="play-pause-btn" class="ctrl-btn play-btn is-paused" title="재생 시작 (단축키: Space / K)">
+                  <span class="pp-icon">⏸</span><span class="pp-text">정지</span>
+                </button>
                 <button id="prev-btn" class="ctrl-btn" title="이전 영상 (Shift+Left)">⏮</button>
                 <button id="next-btn" class="ctrl-btn primary" title="다음 영상 (Shift+Right)">⏭</button>
 
@@ -1800,9 +1911,9 @@
               <div class="ctrl-group ctrl-right">
                 <!-- Video Quality Selector -->
                 <select id="quality-select" class="ctrl-select" title="화질 조절 (1080p, 720p, 자동 등)">
-                  <option value="auto" selected>화질: 자동</option>
-                  <option value="hd1080">1080p HD</option>
-                  <option value="hd720">720p HD</option>
+                  <option value="auto" selected>자동</option>
+                  <option value="hd1080">1080p</option>
+                  <option value="hd720">720p</option>
                   <option value="large">480p</option>
                   <option value="medium">360p</option>
                 </select>
@@ -1818,7 +1929,9 @@
                 </select>
 
                 <!-- Subtitles Toggle Button -->
-                <button id="subtitles-btn" class="ctrl-btn" title="자막 켜기/끄기 (단축키: C)">💬 자막</button>
+                <button id="subtitles-btn" class="ctrl-btn" title="자막 켜기/끄기 (단축키: C)">
+                  <span class="sub-icon">💬</span><span class="sub-text"> 자막</span>
+                </button>
 
                 <button id="toggle-watched-btn" class="ctrl-btn" title="시청 완료 체크">✓ 완료</button>
                 <button id="clear-watched-btn" class="ctrl-btn subtle-btn" title="모든 시청 완료(✓) 기록 초기화" style="color:#888; font-size:11px;">초기화</button>
@@ -2865,7 +2978,7 @@
             },
             'onStateChange': function(event) {
               if (event.data === YT.PlayerState.PLAYING) {
-                if (playPauseBtn) playPauseBtn.innerText = '⏸';
+                if (typeof updatePlayPauseUI === "function") updatePlayPauseUI(true);
                 applyPreferredQuality();
                 updateQualityOptions();
                 applySubtitlesState();
@@ -2873,11 +2986,11 @@
               }
 
               if (event.data === YT.PlayerState.PAUSED) {
-                if (playPauseBtn) playPauseBtn.innerText = '▶';
+                if (typeof updatePlayPauseUI === "function") updatePlayPauseUI(false);
                 saveCurrentPlayingPosition();
               }
               if (event.data === YT.PlayerState.ENDED) {
-                if (playPauseBtn) playPauseBtn.innerText = '▶';
+                if (typeof updatePlayPauseUI === "function") updatePlayPauseUI(false);
                 const curVid = displayList[currentIndex];
                 if (curVid) clearVideoPosition(curVid.id);
                 markCurrentVideoAsWatched();
@@ -3249,6 +3362,22 @@
       setTimeout(() => centerRipple.classList.remove("active"), 280);
     }
 
+    function updatePlayPauseUI(isPlaying) {
+      if (videoWrapper) {
+        videoWrapper.classList.toggle("is-paused", !isPlaying);
+      }
+      if (!playPauseBtn) return;
+      if (isPlaying) {
+        playPauseBtn.className = "ctrl-btn play-btn is-playing";
+        playPauseBtn.innerHTML = '<span class="pp-icon">▶</span><span class="pp-text">재생</span>';
+        playPauseBtn.title = "일시정지 (단축키: Space / K)";
+      } else {
+        playPauseBtn.className = "ctrl-btn play-btn is-paused";
+        playPauseBtn.innerHTML = '<span class="pp-icon">⏸</span><span class="pp-text">정지</span>';
+        playPauseBtn.title = "재생 시작 (단축키: Space / K)";
+      }
+    }
+
     function togglePlayPause() {
       if (!isPlayerReady || !player) {
         if (typeof window.initPlayer === "function") {
@@ -3263,11 +3392,11 @@
         const state = (typeof player.getPlayerState === "function") ? player.getPlayerState() : -1;
         if (state === YT.PlayerState.PLAYING) {
           player.pauseVideo();
-          if (playPauseBtn) playPauseBtn.innerText = "▶";
+          updatePlayPauseUI(false);
           showCenterRipple("⏸");
         } else {
           player.playVideo();
-          if (playPauseBtn) playPauseBtn.innerText = "⏸";
+          updatePlayPauseUI(true);
           showCenterRipple("▶");
         }
       } catch (e) {
@@ -3695,17 +3824,19 @@
         const currentQ = typeof player.getPlaybackQuality === "function" ? player.getPlaybackQuality() : "auto";
         const savedQ = localStorage.getItem("yt_preferred_quality") || "auto";
 
+        const isMobile = window.innerWidth <= 768;
+        const autoLabel = isMobile ? "자동" : "화질: 자동";
         const qualityLabels = {
-          "highres": "4K Ultra",
-          "hd2160": "4K (2160p)",
-          "hd1440": "2K (1440p)",
-          "hd1080": "1080p HD",
-          "hd720": "720p HD",
+          "highres": "4K",
+          "hd2160": "4K",
+          "hd1440": "2K",
+          "hd1080": isMobile ? "1080p" : "1080p HD",
+          "hd720": isMobile ? "720p" : "720p HD",
           "large": "480p",
           "medium": "360p",
           "small": "240p",
           "tiny": "144p",
-          "auto": "화질: 자동"
+          "auto": autoLabel
         };
 
         const currentValues = Array.from(qualitySelect.options).map(o => o.value);
@@ -3718,7 +3849,7 @@
 
           const autoOpt = document.createElement("option");
           autoOpt.value = "auto";
-          autoOpt.innerText = "화질: 자동";
+          autoOpt.innerText = autoLabel;
           qualitySelect.appendChild(autoOpt);
 
           desiredValues.slice(1).forEach(lvl => {
@@ -4110,6 +4241,7 @@
     updateOrderButtons();
     updateMembershipFilterButtons();
     updateChannelDropdown();
+    if (typeof updatePlayPauseUI === "function") updatePlayPauseUI(false);
     let savedScreenMode = localStorage.getItem("binge_screen_mode");
     if (window.innerWidth <= 768) {
       savedScreenMode = "large";
