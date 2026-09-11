@@ -1501,23 +1501,194 @@
     .status-msg.loading { color: #aaa; }
     .status-msg.success { color: #66ff88; }
 
-    /* Responsive & Polish */
+    /* Mobile Fullscreen & Layout Refinement */
+    .video-wrapper.is-mobile-fullscreen {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      height: 100dvh !important;
+      z-index: 9999999 !important;
+      background: #000 !important;
+      border-radius: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      max-width: none !important;
+      max-height: none !important;
+      box-shadow: none !important;
+    }
+    .video-wrapper.is-mobile-fullscreen .video-controls-overlay {
+      padding: 50px 20px 24px !important;
+    }
+    body.mobile-fullscreen-active {
+      overflow: hidden !important;
+    }
+
+    /* Responsive & Polish for Mobile */
     @media (max-width: 768px) {
       .main-container {
         flex-direction: column !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        overflow: hidden !important;
       }
       .resizer {
         display: none !important;
       }
-      .list-section {
-        width: 100% !important;
-        height: 45vh !important;
-        border-left: none !important;
-        border-top: 1px solid var(--border-color);
+      .float-list-btn {
+        display: none !important;
       }
-      .header-stats-badge {
-        font-size: 11px;
-        padding: 3px 6px;
+      .player-section {
+        flex: 0 0 auto !important;
+        width: 100% !important;
+        height: auto !important;
+        background: #000 !important;
+      }
+      .video-container {
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 16 / 9;
+      }
+      .video-wrapper {
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 100% !important;
+        max-height: none !important;
+        aspect-ratio: 16 / 9;
+        border-radius: 0 !important;
+      }
+
+      /* Simplified Mobile Video Controls */
+      .video-controls-overlay {
+        padding: 24px 10px 10px !important;
+      }
+      .volume-container {
+        display: none !important;
+      }
+      .video-title-text {
+        display: none !important;
+      }
+      #quality-select {
+        display: none !important;
+      }
+      #toggle-watched-btn,
+      #clear-watched-btn,
+      .toggle-label {
+        display: none !important;
+      }
+      .overlay-controls-row {
+        gap: 6px !important;
+      }
+      .ctrl-group {
+        gap: 5px !important;
+      }
+      .ctrl-btn {
+        padding: 7px 9px !important;
+        font-size: 13px !important;
+        min-height: 36px !important;
+        min-width: 36px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+      }
+      #play-pause-btn {
+        font-size: 16px !important;
+        padding: 7px 11px !important;
+        min-width: 38px !important;
+      }
+      #fullscreen-btn {
+        font-size: 16px !important;
+        padding: 7px 11px !important;
+        background: rgba(255, 255, 255, 0.18) !important;
+        font-weight: bold !important;
+        border-color: rgba(255, 255, 255, 0.3) !important;
+      }
+      .ctrl-select {
+        padding: 5px 6px !important;
+        font-size: 12px !important;
+        height: 36px !important;
+      }
+      .time-display {
+        font-size: 11px !important;
+        padding: 0 2px !important;
+      }
+
+      /* Progress Bar Touch Scrubbing */
+      .progress-track {
+        height: 6px !important;
+        margin-bottom: 2px !important;
+      }
+      .progress-thumb {
+        width: 14px !important;
+        height: 14px !important;
+        transform: translate(-50%, -50%) scale(1) !important;
+      }
+
+      /* Clean Sidebar (Playlist) on Mobile */
+      .list-section {
+        flex: 1 1 auto !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 0 !important;
+        border-left: none !important;
+        border-top: 1px solid var(--border-color) !important;
+        display: flex !important;
+        flex-direction: column !important;
+      }
+      #toggle-sidebar-btn {
+        display: none !important;
+      }
+      .view-modes-group {
+        display: none !important;
+      }
+      .sidebar-header {
+        padding: 8px 10px 6px !important;
+        gap: 5px !important;
+      }
+      .channel-select {
+        font-size: 13px !important;
+        height: 36px !important;
+      }
+      .add-channel-btn {
+        height: 36px !important;
+        padding: 0 10px !important;
+        font-size: 12.5px !important;
+      }
+      .list-toolbar {
+        padding: 6px 10px !important;
+        gap: 6px !important;
+      }
+      .search-wrap {
+        height: 36px !important;
+      }
+      .search-input {
+        font-size: 12.5px !important;
+      }
+      .toolbar-actions {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 5px !important;
+        justify-content: space-between !important;
+      }
+      .order-btn {
+        padding: 5px 8px !important;
+        font-size: 12px !important;
+        min-height: 32px !important;
+      }
+      .video-list {
+        flex: 1 1 0 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
+      .video-item {
+        padding: 10px 12px !important;
+      }
+      .video-title {
+        font-size: 12.5px !important;
+        line-height: 1.35 !important;
       }
     }
 
@@ -3058,11 +3229,18 @@
       }
     });
 
-    // Click Layer: Single-click Play/Pause, Double-click Fullscreen
+    // Click Layer: Single-click Play/Pause, Double-click Fullscreen, and Mobile Touch Support
     let singleClickTimer = null;
     if (clickLayer) {
+      clickLayer.addEventListener("touchstart", () => {
+        wakeOverlay();
+        scheduleOverlayHide(3500);
+      }, { passive: true });
+
       clickLayer.addEventListener("click", (e) => {
         e.stopPropagation();
+        wakeOverlay();
+        scheduleOverlayHide(2800);
         if (singleClickTimer) {
           clearTimeout(singleClickTimer);
           singleClickTimer = null;
@@ -3286,29 +3464,89 @@
       });
     }
 
-    // Fullscreen Toggle & Events
+    // Fullscreen Toggle & Events (Native + Mobile CSS Full-Viewport Fallback for iOS/Android)
     let previousModeBeforeFs = "large";
 
+    function isCurrentlyFullscreen() {
+      return !!(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.mozFullScreenElement ||
+        document.msFullscreenElement ||
+        (videoWrapper && videoWrapper.classList.contains("is-mobile-fullscreen"))
+      );
+    }
+
+    function enterMobileCssFullscreen() {
+      if (!videoWrapper) return;
+      videoWrapper.classList.add("is-mobile-fullscreen");
+      document.body.classList.add("mobile-fullscreen-active");
+      if (fullscreenBtn) {
+        fullscreenBtn.innerText = "✕";
+        fullscreenBtn.title = "전체화면 종료";
+      }
+      try {
+        if (screen.orientation && typeof screen.orientation.lock === "function") {
+          screen.orientation.lock("landscape").catch(() => {});
+        }
+      } catch (e) {}
+      wakeOverlay();
+      scheduleOverlayHide(3000);
+      showToast("⛶ 전체화면 모드 (화면을 가로로 돌려보세요)", 2000);
+    }
+
+    function exitMobileCssFullscreen() {
+      if (!videoWrapper) return;
+      videoWrapper.classList.remove("is-mobile-fullscreen");
+      document.body.classList.remove("mobile-fullscreen-active");
+      if (fullscreenBtn) {
+        fullscreenBtn.innerText = "⛶";
+        fullscreenBtn.title = "전체화면 (F)";
+      }
+      try {
+        if (screen.orientation && typeof screen.orientation.unlock === "function") {
+          screen.orientation.unlock();
+        }
+      } catch (e) {}
+    }
+
     function toggleFullscreen() {
-      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-        const root = document.documentElement;
-        const req = root.requestFullscreen || root.webkitRequestFullscreen || root.mozRequestFullScreen || root.msRequestFullscreen;
+      if (!isCurrentlyFullscreen()) {
+        const target = videoWrapper || document.documentElement;
+        const req = target.requestFullscreen || target.webkitRequestFullscreen || target.mozRequestFullScreen || target.msRequestFullscreen;
         if (req) {
-          req.call(root).catch(err => {
-            console.warn("Document fullscreen failed, falling back to videoWrapper:", err);
-            if (videoWrapper && videoWrapper.requestFullscreen) videoWrapper.requestFullscreen();
-          });
-        } else if (videoWrapper && videoWrapper.requestFullscreen) {
-          videoWrapper.requestFullscreen();
+          try {
+            const p = req.call(target);
+            if (p && typeof p.catch === "function") {
+              p.catch(() => {
+                enterMobileCssFullscreen();
+              });
+            }
+          } catch(err) {
+            enterMobileCssFullscreen();
+          }
+        } else {
+          // iOS Safari or browser without Fullscreen API
+          enterMobileCssFullscreen();
         }
       } else {
-        const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
-        if (exit) exit.call(document);
+        if (videoWrapper && videoWrapper.classList.contains("is-mobile-fullscreen")) {
+          exitMobileCssFullscreen();
+        } else {
+          const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+          if (exit) {
+            try { exit.call(document); } catch(e) {}
+          }
+        }
       }
     }
 
     function handleFullscreenChange() {
-      const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      const isFs = isCurrentlyFullscreen();
+      if (fullscreenBtn) {
+        fullscreenBtn.innerText = isFs ? "✕" : "⛶";
+        fullscreenBtn.title = isFs ? "전체화면 종료" : "전체화면 (F)";
+      }
       if (isFs) {
         if (!document.body.classList.contains("mode-max")) {
           previousModeBeforeFs = currentScreenMode || "large";
@@ -3323,6 +3561,15 @@
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("mozfullscreenchange", handleFullscreenChange);
+    document.addEventListener("MSFullscreenChange", handleFullscreenChange);
+
+    // Escape key handler for mobile CSS fullscreen
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && videoWrapper && videoWrapper.classList.contains("is-mobile-fullscreen")) {
+        exitMobileCssFullscreen();
+      }
+    });
 
     if (fullscreenBtn) fullscreenBtn.addEventListener("click", toggleFullscreen);
 
