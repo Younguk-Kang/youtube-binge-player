@@ -8,6 +8,7 @@ import os
 import sys
 import time
 import threading
+from datetime import datetime
 
 PORT = int(os.environ.get("PORT", 54321))
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
@@ -261,6 +262,30 @@ def search_youtube_channels(query, limit=8):
         print(f"[SEARCH_CHANNELS] Error searching for '{query}': {e}", flush=True)
         return []
 
+def parse_youtube_date_to_days(date_str):
+    if not date_str:
+        return 999999.0
+    s = str(date_str).replace("스트리밍 시간:", "").replace("최초 공개:", "").replace("스트리밍됨", "").strip()
+    m_abs = re.search(r"(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})", s)
+    if m_abs:
+        try:
+            d = datetime(int(m_abs.group(1)), int(m_abs.group(2)), int(m_abs.group(3)))
+            return (datetime.now() - d).total_seconds() / 86400.0
+        except Exception:
+            pass
+    m = re.search(r"(\d+)\s*(초|분|시간|일|주|개월|달|년)\s*전", s)
+    if m:
+        val = int(m.group(1))
+        unit = m.group(2)
+        if unit == "초": return val / 86400.0
+        if unit == "분": return val / 1440.0
+        if unit == "시간": return val / 24.0
+        if unit == "일": return float(val)
+        if unit == "주": return float(val * 7)
+        if unit in ("개월", "달"): return float(val * 30.5)
+        if unit == "년": return float(val * 365.0)
+    return 999999.0
+
 def fetch_youtube_channel(channel_input, force=False):
     channel_input = channel_input.strip()
     cache_key = channel_input.lower()
@@ -293,7 +318,8 @@ def fetch_youtube_channel(channel_input, force=False):
     if not channel_id:
         try:
             ch_url = channel_input if (channel_input.startswith("http://") or channel_input.startswith("https://")) else f"https://www.youtube.com/@{channel_input}"
-            html_req = urllib.request.Request(ch_url, headers={"User-Agent": headers["User-Agent"]})
+            encoded_url = urllib.parse.quote(ch_url, safe=":/?#[]@!$&'()*+,;=")
+            html_req = urllib.request.Request(encoded_url, headers={"User-Agent": headers["User-Agent"]})
             with urllib.request.urlopen(html_req, timeout=8) as h_resp:
                 h_text = h_resp.read().decode("utf-8", errors="replace")
             m_cid = re.search(r'channelId":"(UC[\w-]{22})"', h_text) or re.search(r'externalId":"(UC[\w-]{22})"', h_text)
@@ -306,154 +332,229 @@ def fetch_youtube_channel(channel_input, force=False):
         raise ValueError(f"채널 ID를 찾을 수 없습니다: {channel_input}")
 
     api_url = "https://www.youtube.com/youtubei/v1/browse"
-    payload = json.dumps({
-        "context": {"client": {"clientName": "WEB", "clientVersion": "2.20260904.01.00", "hl": "ko", "gl": "KR"}},
-        "browseId": channel_id,
-        "params": "EgZ2aWRlb3PyBgQKAjoA"
-    }).encode("utf-8")
-
-    req = urllib.request.Request(api_url, data=payload, headers=headers)
-    with urllib.request.urlopen(req, timeout=12) as resp:
-        data = json.loads(resp.read().decode("utf-8"))
-
     channel_name = "유튜브 채널"
     subscribers = ""
-    try:
-        header = data.get("header", {})
-        phr = header.get("pageHeaderRenderer", {})
-        vm = phr.get("content", {}).get("pageHeaderViewModel", {})
-        channel_name = vm.get("title", {}).get("dynamicTextViewModel", {}).get("text", {}).get("content", channel_name)
-        rows = vm.get("metadata", {}).get("contentMetadataViewModel", {}).get("metadataRows", [])
-        for r in rows:
-            for p in r.get("metadataParts", []):
-                t = p.get("text", {}).get("content", "")
-                if "구독자" in t:
-                    subscribers = t
-                    break
-        if not subscribers:
-            c4 = header.get("c4TabbedHeaderRenderer", {})
-            sub_count = c4.get("subscriberCountText", {})
-            if isinstance(sub_count, dict):
-                subscribers = sub_count.get("simpleText") or sub_count.get("runs", [{}])[0].get("text", "")
-            if not channel_name or channel_name == "유튜브 채널":
-                channel_name = c4.get("title", channel_name)
-    except Exception:
-        pass
-
-    videos = []
     seen = set()
-    token = None
-
-    def extract_rich_items(obj):
-        nonlocal token
-        items = []
-        def walk(o):
-            nonlocal token
-            if isinstance(o, dict):
-                if "richItemRenderer" in o:
-                    items.append(o["richItemRenderer"])
-                if "continuationCommand" in o and not token:
-                    token = o["continuationCommand"].get("token")
-                for v in o.values(): walk(v)
-            elif isinstance(o, list):
-                for v in o: walk(v)
-        walk(obj)
-        return items
-
-    tabs = data.get("contents", {}).get("twoColumnBrowseResultsRenderer", {}).get("tabs", [])
-    videos_tab_content = None
-    for t in tabs:
-        tr = t.get("tabRenderer", {})
-        if tr.get("selected"):
-            videos_tab_content = tr.get("content", {})
-            break
-
-    if not videos_tab_content:
-        def find_grid(o):
-            nonlocal videos_tab_content
-            if videos_tab_content: return
-            if isinstance(o, dict):
-                if "richGridRenderer" in o:
-                    videos_tab_content = o["richGridRenderer"]
-                    return
-                for v in o.values(): find_grid(v)
-            elif isinstance(o, list):
-                for v in o: find_grid(v)
-        find_grid(data)
-
-    if not videos_tab_content:
-        raise ValueError("동영상 목록을 불러올 수 없습니다.")
-
-    items = extract_rich_items(videos_tab_content)
+    videos = []
+    start_total_time = time.time()
 
     def parse_item(item):
-        lvm = item.get("content", {}).get("lockupViewModel", {})
-        vid = lvm.get("contentId")
+        lvm = item.get("content", {}).get("lockupViewModel", {}) or item.get("lockupViewModel", {})
+        vr = (
+            item.get("content", {}).get("videoRenderer", {})
+            or item.get("videoRenderer", {})
+            or item.get("gridVideoRenderer", {})
+            or item.get("playlistVideoRenderer", {})
+        )
+        vid = lvm.get("contentId") or vr.get("videoId")
+        if not vid or vid in seen:
+            return None
+
         title = ""
-        meta = {}
-        if vid:
-            meta = lvm.get("metadata", {}).get("lockupMetadataViewModel", {})
-            title = meta.get("title", {}).get("content", "")
-        else:
-            vr = item.get("content", {}).get("videoRenderer", {}) or item.get("videoRenderer", {})
-            vid = vr.get("videoId")
-            if vid:
-                title = vr.get("title", {}).get("runs", [{}])[0].get("text", "") or vr.get("title", {}).get("simpleText", "")
-
-        if not vid or vid in seen: return None
-        seen.add(vid)
-
         duration = ""
         views = ""
         upload_date = ""
-        try:
-            m_rows = meta.get("metadata", {}).get("contentMetadataViewModel", {}).get("metadataRows", [])
-            for r in m_rows:
-                for p in r.get("metadataParts", []):
-                    t = p.get("text", {}).get("content", "")
-                    if "조회수" in t: views = t
-                    elif "전" in t or "." in t: upload_date = t
-        except Exception: pass
-        try:
-            badges = lvm.get("contentImage", {}).get("thumbnailViewModel", {}).get("overlays", [])
-            for b in badges:
-                for subb in b.get("thumbnailBottomOverlayViewModel", {}).get("badges", []):
-                    t = subb.get("thumbnailBadgeViewModel", {}).get("text", "")
-                    if ":" in t: duration = t
-        except Exception: pass
 
+        if lvm.get("contentId"):
+            meta = lvm.get("metadata", {}).get("lockupMetadataViewModel", {})
+            title = meta.get("title", {}).get("content", "")
+            try:
+                m_rows = meta.get("metadata", {}).get("contentMetadataViewModel", {}).get("metadataRows", [])
+                for r in m_rows:
+                    for p in r.get("metadataParts", []):
+                        t = p.get("text", {}).get("content", "")
+                        if "조회수" in t:
+                            views = t
+                        elif "전" in t or "." in t:
+                            upload_date = t
+            except Exception:
+                pass
+            try:
+                badges = lvm.get("contentImage", {}).get("thumbnailViewModel", {}).get("overlays", [])
+                for b in badges:
+                    for subb in b.get("thumbnailBottomOverlayViewModel", {}).get("badges", []):
+                        t = subb.get("thumbnailBadgeViewModel", {}).get("text", "")
+                        if ":" in t:
+                            duration = t
+            except Exception:
+                pass
+        else:
+            title = (
+                vr.get("title", {}).get("runs", [{}])[0].get("text", "")
+                or vr.get("title", {}).get("simpleText", "")
+            )
+            duration = vr.get("lengthText", {}).get("simpleText", "")
+            if not duration:
+                for ov in vr.get("thumbnailOverlays", []):
+                    t = ov.get("thumbnailOverlayTimeStatusRenderer", {}).get("text", {}).get("simpleText", "")
+                    if ":" in t:
+                        duration = t
+                        break
+            views = vr.get("viewCountText", {}).get("simpleText", "") or vr.get("shortViewCountText", {}).get("simpleText", "")
+            if not views and "runs" in vr.get("viewCountText", {}):
+                views = "".join(r.get("text", "") for r in vr.get("viewCountText", {}).get("runs", []))
+            upload_date = vr.get("publishedTimeText", {}).get("simpleText", "")
+            if not upload_date and "runs" in vr.get("publishedTimeText", {}):
+                upload_date = "".join(r.get("text", "") for r in vr.get("publishedTimeText", {}).get("runs", []))
+
+        seen.add(vid)
         is_members = check_item_members_only(item, title)
 
-        return {"id": vid, "title": title, "duration": duration, "views": views, "uploadDate": upload_date, "isMembersOnly": is_members}
+        return {
+            "id": vid,
+            "title": title or "제목 없음",
+            "duration": duration,
+            "views": views,
+            "uploadDate": upload_date,
+            "isMembersOnly": is_members
+        }
 
-
-    for it in items:
-        p = parse_item(it)
-        if p: videos.append(p)
-
-    page = 1
-    max_videos = 500
-    while token and len(videos) < max_videos and page < 20:
-        page += 1
-        payload_cont = json.dumps({
-            "context": {"client": {"clientName": "WEB", "clientVersion": "2.20260904.01.00", "hl": "ko", "gl": "KR"}},
-            "continuation": token
-        }).encode("utf-8")
-        req_cont = urllib.request.Request(api_url, data=payload_cont, headers=headers)
-        try:
-            with urllib.request.urlopen(req_cont, timeout=10) as resp:
-                data_cont = json.loads(resp.read().decode("utf-8"))
-        except Exception:
-            break
-
+    def fetch_tab_videos(tab_params, max_tab_videos=3000, max_pages=80, time_budget=30):
+        nonlocal channel_name, subscribers
+        tab_vids = []
         token = None
-        cont_items = extract_rich_items(data_cont)
-        prev_count = len(videos)
-        for it in cont_items:
+
+        def extract_items(obj):
+            nonlocal token
+            items = []
+            def walk(o):
+                nonlocal token
+                if isinstance(o, dict):
+                    if "richItemRenderer" in o:
+                        items.append(o["richItemRenderer"])
+                    elif "videoRenderer" in o and "richItemRenderer" not in o:
+                        items.append(o)
+                    elif "gridVideoRenderer" in o:
+                        items.append(o)
+                    elif "playlistVideoRenderer" in o:
+                        items.append(o)
+
+                    if "continuationCommand" in o and not token:
+                        token = o["continuationCommand"].get("token")
+                    for v in o.values():
+                        walk(v)
+                elif isinstance(o, list):
+                    for v in o:
+                        walk(v)
+            walk(obj)
+            return items
+
+        payload = json.dumps({
+            "context": {"client": {"clientName": "WEB", "clientVersion": "2.20260904.01.00", "hl": "ko", "gl": "KR"}},
+            "browseId": channel_id,
+            "params": tab_params
+        }).encode("utf-8")
+
+        req = urllib.request.Request(api_url, data=payload, headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+        except Exception as e:
+            print(f"[FETCH_TAB_ERROR] params={tab_params}: {e}", flush=True)
+            return tab_vids
+
+        try:
+            header = data.get("header", {})
+            phr = header.get("pageHeaderRenderer", {})
+            vm = phr.get("content", {}).get("pageHeaderViewModel", {})
+            c_name = vm.get("title", {}).get("dynamicTextViewModel", {}).get("text", {}).get("content", "")
+            if c_name:
+                channel_name = c_name
+            rows = vm.get("metadata", {}).get("contentMetadataViewModel", {}).get("metadataRows", [])
+            for r in rows:
+                for p in r.get("metadataParts", []):
+                    t = p.get("text", {}).get("content", "")
+                    if "구독자" in t:
+                        subscribers = t
+                        break
+            if not subscribers:
+                c4 = header.get("c4TabbedHeaderRenderer", {})
+                sub_count = c4.get("subscriberCountText", {})
+                if isinstance(sub_count, dict):
+                    subscribers = sub_count.get("simpleText") or sub_count.get("runs", [{}])[0].get("text", "")
+                if not channel_name or channel_name == "유튜브 채널":
+                    channel_name = c4.get("title", channel_name)
+        except Exception:
+            pass
+
+        tabs = data.get("contents", {}).get("twoColumnBrowseResultsRenderer", {}).get("tabs", [])
+        tab_content = None
+        for t in tabs:
+            tr = t.get("tabRenderer", {})
+            if tr.get("selected"):
+                tab_content = tr.get("content", {})
+                break
+
+        if not tab_content:
+            def find_grid(o):
+                nonlocal tab_content
+                if tab_content:
+                    return
+                if isinstance(o, dict):
+                    if "richGridRenderer" in o:
+                        tab_content = o["richGridRenderer"]
+                        return
+                    for v in o.values():
+                        find_grid(v)
+                elif isinstance(o, list):
+                    for v in o:
+                        find_grid(v)
+            find_grid(data)
+
+        if not tab_content:
+            return tab_vids
+
+        items = extract_items(tab_content)
+        for it in items:
             p = parse_item(it)
-            if p: videos.append(p)
-        if len(videos) == prev_count:
-            break
+            if p:
+                tab_vids.append(p)
+
+        page = 1
+        t_tab_start = time.time()
+        while token and len(tab_vids) < max_tab_videos and page < max_pages:
+            if time.time() - t_tab_start > time_budget:
+                break
+            page += 1
+            payload_cont = json.dumps({
+                "context": {"client": {"clientName": "WEB", "clientVersion": "2.20260904.01.00", "hl": "ko", "gl": "KR"}},
+                "continuation": token
+            }).encode("utf-8")
+            req_cont = urllib.request.Request(api_url, data=payload_cont, headers=headers)
+            try:
+                with urllib.request.urlopen(req_cont, timeout=10) as resp:
+                    data_cont = json.loads(resp.read().decode("utf-8"))
+            except Exception:
+                break
+
+            token = None
+            cont_items = extract_items(data_cont)
+            prev_cnt = len(tab_vids)
+            for it in cont_items:
+                p = parse_item(it)
+                if p:
+                    tab_vids.append(p)
+            if len(tab_vids) == prev_cnt:
+                break
+
+        return tab_vids
+
+    # 1. Fetch "동영상" (Videos) tab: EgZ2aWRlb3PyBgQKAjoA
+    videos_tab_list = fetch_tab_videos("EgZ2aWRlb3PyBgQKAjoA", max_tab_videos=3000, max_pages=80, time_budget=30)
+    videos.extend(videos_tab_list)
+
+    # 2. Fetch "라이브" (Streams / Replays) tab: EgdzdHJlYW1z8gYECgJ6AA==
+    elapsed = time.time() - start_total_time
+    if elapsed < 35 or len(videos) == 0:
+        remain_budget = max(10, 42 - int(elapsed))
+        streams_tab_list = fetch_tab_videos("EgdzdHJlYW1z8gYECgJ6AA==", max_tab_videos=1000, max_pages=40, time_budget=remain_budget)
+        videos.extend(streams_tab_list)
+
+    if not videos:
+        raise ValueError("동영상 목록을 불러올 수 없습니다.")
+
+    # Sort videos: newest first by upload / streaming date
+    videos.sort(key=lambda x: parse_youtube_date_to_days(x.get("uploadDate", "")))
 
     for idx, v in enumerate(videos):
         v["originalIndex"] = idx + 1
@@ -667,67 +768,128 @@ class PlayerHandler(http.server.SimpleHTTPRequestHandler):
 
             try:
                 api_url = "https://www.youtube.com/youtubei/v1/browse"
-                payload = json.dumps({
-                    "context": {
-                        "client": {
-                            "clientName": "WEB",
-                            "clientVersion": "2.20260904.01.00",
-                            "hl": "ko",
-                            "gl": "KR"
-                        }
-                    },
-                    "browseId": channel_id,
-                    "params": "EgZ2aWRlb3PyBgQKAjoA"
-                }).encode("utf-8")
-
                 headers = {
                     "Content-Type": "application/json",
                     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
                 }
-                req = urllib.request.Request(api_url, data=payload, headers=headers)
-                with urllib.request.urlopen(req, timeout=6) as resp:
-                    resp_data = json.loads(resp.read().decode("utf-8", errors="replace"))
 
-                items = []
                 subscribers = ""
+                raw_items = []
+
+                def fetch_sync_tab(tab_params):
+                    nonlocal subscribers
+                    payload = json.dumps({
+                        "context": {
+                            "client": {
+                                "clientName": "WEB",
+                                "clientVersion": "2.20260904.01.00",
+                                "hl": "ko",
+                                "gl": "KR"
+                            }
+                        },
+                        "browseId": channel_id,
+                        "params": tab_params
+                    }).encode("utf-8")
+                    req = urllib.request.Request(api_url, data=payload, headers=headers)
+                    with urllib.request.urlopen(req, timeout=6) as resp:
+                        resp_data = json.loads(resp.read().decode("utf-8", errors="replace"))
+
+                    if not subscribers:
+                        try:
+                            header = resp_data.get("header", {})
+                            phr = header.get("pageHeaderRenderer", {})
+                            vm = phr.get("content", {}).get("pageHeaderViewModel", {})
+                            rows = vm.get("metadata", {}).get("contentMetadataViewModel", {}).get("metadataRows", [])
+                            for r in rows:
+                                for p in r.get("metadataParts", []):
+                                    t = p.get("text", {}).get("content", "")
+                                    if "구독자" in t:
+                                        subscribers = t
+                                        break
+                        except Exception:
+                            pass
+
+                    tab_items = []
+                    def find_items(o):
+                        if isinstance(o, dict):
+                            if "richItemRenderer" in o:
+                                tab_items.append(o["richItemRenderer"])
+                            elif "videoRenderer" in o and "richItemRenderer" not in o:
+                                tab_items.append(o)
+                            for v in o.values():
+                                find_items(v)
+                        elif isinstance(o, list):
+                            for i in o:
+                                find_items(i)
+                    find_items(resp_data)
+                    return tab_items
+
                 try:
-                    header = resp_data.get("header", {})
-                    phr = header.get("pageHeaderRenderer", {})
-                    vm = phr.get("content", {}).get("pageHeaderViewModel", {})
-                    rows = vm.get("metadata", {}).get("contentMetadataViewModel", {}).get("metadataRows", [])
-                    for r in rows:
-                        for p in r.get("metadataParts", []):
-                            t = p.get("text", {}).get("content", "")
-                            if "구독자" in t:
-                                subscribers = t
-                                break
+                    raw_items = fetch_sync_tab("EgZ2aWRlb3PyBgQKAjoA")
+                except Exception:
+                    raw_items = []
+
+                try:
+                    stream_items = fetch_sync_tab("EgdzdHJlYW1z8gYECgJ6AA==")
+                    raw_items.extend(stream_items[:15])
                 except Exception:
                     pass
 
-                def find_items(o):
-                    if isinstance(o, dict):
-                        if "lockupViewModel" in o:
-                            items.append(o["lockupViewModel"])
-                        for v in o.values():
-                            find_items(v)
-                    elif isinstance(o, list):
-                        for i in o:
-                            find_items(i)
-                find_items(resp_data)
-
                 latest_videos = []
                 seen = set()
-                for lvm in items:
-                    vid = lvm.get("contentId")
+                for it in raw_items:
+                    lvm = it.get("content", {}).get("lockupViewModel", {}) or it.get("lockupViewModel", {})
+                    vr = it.get("content", {}).get("videoRenderer", {}) or it.get("videoRenderer", {})
+                    vid = lvm.get("contentId") or vr.get("videoId")
                     if not vid or vid in seen:
                         continue
                     seen.add(vid)
-                    meta = lvm.get("metadata", {}).get("lockupMetadataViewModel", {})
-                    title = meta.get("title", {}).get("content", "")
+
+                    title = ""
                     duration = ""
                     views = ""
                     upload_date = ""
-                    is_members = check_item_members_only(lvm, title)
+
+                    if lvm.get("contentId"):
+                        meta = lvm.get("metadata", {}).get("lockupMetadataViewModel", {})
+                        title = meta.get("title", {}).get("content", "")
+                        try:
+                            m_rows = meta.get("metadata", {}).get("contentMetadataViewModel", {}).get("metadataRows", [])
+                            for r in m_rows:
+                                for p in r.get("metadataParts", []):
+                                    t = p.get("text", {}).get("content", "")
+                                    if "조회수" in t:
+                                        views = t
+                                    elif "전" in t or "." in t:
+                                        upload_date = t
+                        except Exception:
+                            pass
+                        try:
+                            badges = lvm.get("contentImage", {}).get("thumbnailViewModel", {}).get("overlays", [])
+                            for b in badges:
+                                for subb in b.get("thumbnailBottomOverlayViewModel", {}).get("badges", []):
+                                    t = subb.get("thumbnailBadgeViewModel", {}).get("text", "")
+                                    if ":" in t:
+                                        duration = t
+                        except Exception:
+                            pass
+                    else:
+                        title = vr.get("title", {}).get("runs", [{}])[0].get("text", "") or vr.get("title", {}).get("simpleText", "")
+                        duration = vr.get("lengthText", {}).get("simpleText", "")
+                        if not duration:
+                            for ov in vr.get("thumbnailOverlays", []):
+                                t = ov.get("thumbnailOverlayTimeStatusRenderer", {}).get("text", {}).get("simpleText", "")
+                                if ":" in t:
+                                    duration = t
+                                    break
+                        views = vr.get("viewCountText", {}).get("simpleText", "") or vr.get("shortViewCountText", {}).get("simpleText", "")
+                        if not views and "runs" in vr.get("viewCountText", {}):
+                            views = "".join(r.get("text", "") for r in vr.get("viewCountText", {}).get("runs", []))
+                        upload_date = vr.get("publishedTimeText", {}).get("simpleText", "")
+                        if not upload_date and "runs" in vr.get("publishedTimeText", {}):
+                            upload_date = "".join(r.get("text", "") for r in vr.get("publishedTimeText", {}).get("runs", []))
+
+                    is_members = check_item_members_only(it, title)
 
                     if vid and title:
                         v_obj = {
@@ -742,13 +904,15 @@ class PlayerHandler(http.server.SimpleHTTPRequestHandler):
                         with db_lock:
                             VIDEO_METADATA_MAP[vid] = {"views": views, "uploadDate": upload_date}
 
+                latest_videos.sort(key=lambda x: parse_youtube_date_to_days(x.get("uploadDate", "")))
+
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.end_headers()
                 self.wfile.write(json.dumps({
                     "success": True,
                     "subscribers": subscribers,
-                    "latestVideos": latest_videos
+                    "latestVideos": latest_videos[:25]
                 }, ensure_ascii=False).encode("utf-8"))
             except Exception as e:
                 self.send_response(500)
