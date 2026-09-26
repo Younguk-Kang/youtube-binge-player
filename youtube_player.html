@@ -338,12 +338,13 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      padding: 6px 14px;
-      background: #141414;
-      border-top: 1px solid #282828;
+      padding: 7px 16px;
+      background: #121212;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
       box-sizing: border-box;
       flex-shrink: 0;
       z-index: 10;
+      transition: background 0.2s ease, border-color 0.2s ease;
     }
 
     .bcb-group {
@@ -361,6 +362,7 @@
       min-width: 0;
       text-align: center;
       overflow: hidden;
+      padding: 0 12px;
     }
 
     .bcb-center .video-title-text {
@@ -370,8 +372,9 @@
       overflow: hidden;
       text-overflow: ellipsis;
       font-size: 13px;
-      font-weight: 600;
-      color: #eee;
+      font-weight: 500;
+      color: #f1f1f1;
+      letter-spacing: -0.2px;
     }
 
     .bcb-right {
@@ -386,17 +389,140 @@
     body.mode-max .video-container {
       width: 100vw !important;
       height: 100vh !important;
+      position: relative;
     }
 
     body.mode-max .video-wrapper {
-      max-width: calc((100vh - 48px) * (16 / 9)) !important;
-      max-height: calc(100vh - 48px) !important;
+      max-width: calc(100vh * (16 / 9)) !important;
+      max-height: 100vh !important;
       width: 100% !important;
       height: 100% !important;
     }
 
     body.mode-max .binge-control-bar {
-      max-width: calc((100vh - 48px) * (16 / 9)) !important;
+      position: absolute;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%) translateY(0);
+      width: auto;
+      min-width: 320px;
+      max-width: min(880px, 92vw) !important;
+      border-radius: 40px;
+      background: rgba(18, 18, 18, 0.88);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85);
+      padding: 8px 20px;
+      z-index: 1001;
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.28s;
+    }
+
+    body.mode-max .binge-control-bar.is-hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateX(-50%) translateY(16px);
+    }
+
+    /* Floating trigger pill in maximize mode when binge bar is auto-hidden */
+    .bottom-binge-trigger {
+      display: none;
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(22, 22, 22, 0.82);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 11.5px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.85);
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.65);
+      cursor: pointer;
+      z-index: 1000;
+      align-items: center;
+      gap: 5px;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.22s ease, transform 0.22s ease, background 0.18s ease;
+      user-select: none;
+    }
+    .bottom-binge-trigger:hover {
+      background: rgba(38, 38, 38, 0.95);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.35);
+      transform: translateX(-50%) translateY(-2px);
+    }
+    .bottom-binge-trigger .bbt-icon {
+      font-size: 11px;
+      line-height: 1;
+    }
+    body.mode-max .bottom-binge-trigger {
+      display: inline-flex;
+    }
+    body.mode-max .binge-control-bar.is-hidden ~ .bottom-binge-trigger {
+      opacity: 0.85;
+      visibility: visible;
+      pointer-events: auto;
+    }
+    body.mode-max .bottom-binge-trigger:hover {
+      opacity: 1;
+    }
+
+    /* Fullscreen Support for Floating Binge Bar */
+    .video-container:fullscreen .video-wrapper,
+    .video-container:-webkit-full-screen .video-wrapper {
+      max-width: 100vw !important;
+      max-height: 100vh !important;
+      width: 100vw !important;
+      height: 100vh !important;
+    }
+    .video-container:fullscreen .binge-control-bar,
+    .video-container:-webkit-full-screen .binge-control-bar {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(0);
+      width: auto;
+      min-width: 320px;
+      max-width: min(880px, 92vw) !important;
+      background: rgba(18, 18, 18, 0.88);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 40px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85);
+      padding: 8px 20px;
+      z-index: 1001;
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.28s;
+    }
+    .video-container:fullscreen .binge-control-bar.is-hidden,
+    .video-container:-webkit-full-screen .binge-control-bar.is-hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateX(-50%) translateY(16px);
+    }
+    .video-container:fullscreen .bottom-binge-trigger,
+    .video-container:-webkit-full-screen .bottom-binge-trigger {
+      display: inline-flex;
+    }
+    .video-container:fullscreen .binge-control-bar.is-hidden ~ .bottom-binge-trigger,
+    .video-container:-webkit-full-screen .binge-control-bar.is-hidden ~ .bottom-binge-trigger {
+      opacity: 0.85;
+      visibility: visible;
+      pointer-events: auto;
     }
 
     /* Right Sidebar in mode-max (slides in from right smoothly) */
@@ -662,31 +788,119 @@
     }
 
     .ctrl-btn {
-      background: rgba(35, 35, 35, 0.9);
-      border: 1.5px solid rgba(255, 255, 255, 0.24);
-      color: #fff;
-      border-radius: 6px;
-      padding: 5px 9px;
-      font-size: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: #f1f1f1;
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 12.5px;
+      font-weight: 500;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.15s ease, border-color 0.15s ease;
+      gap: 4px;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
       font-family: inherit;
+      user-select: none;
     }
     .ctrl-btn:hover {
-      background: rgba(70, 70, 70, 0.95);
-      border-color: rgba(255, 255, 255, 0.45);
-    }
-    .ctrl-btn.primary {
-      background: #2b2b2b;
-      border-color: #444444;
+      background: rgba(255, 255, 255, 0.18);
+      border-color: rgba(255, 255, 255, 0.35);
       color: #ffffff;
     }
+    .ctrl-btn:active {
+      transform: scale(0.97);
+    }
+    .ctrl-btn.primary {
+      background: #ffffff;
+      border-color: #ffffff;
+      color: #0f0f0f;
+      font-weight: 600;
+    }
     .ctrl-btn.primary:hover {
-      background: #3b3b3b;
-      border-color: #666666;
+      background: #e5e5e5;
+      border-color: #e5e5e5;
+      color: #000000;
+    }
+    .ctrl-btn.subtle-btn {
+      background: transparent;
+      border-color: rgba(255, 255, 255, 0.12);
+      color: #999999;
+      font-size: 11.5px;
+    }
+    .ctrl-btn.subtle-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #f1f1f1;
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+    .ctrl-btn.active {
+      background: rgba(38, 166, 154, 0.2) !important;
+      border-color: rgba(38, 166, 154, 0.55) !important;
+      color: #80cbc4 !important;
+    }
+
+    /* YouTube-style Autoplay Switch */
+    .yt-switch-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 12px;
+      color: #cccccc;
+      margin-left: 4px;
+      transition: color 0.15s ease;
+    }
+    .yt-switch-wrap:hover {
+      color: #ffffff;
+    }
+    .yt-switch-label {
+      font-size: 12px;
+      color: #cccccc;
+      font-weight: 500;
+    }
+    .yt-switch {
+      position: relative;
+      display: inline-block;
+      width: 34px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+    .yt-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+    .yt-slider {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.24);
+      border-radius: 20px;
+      transition: background-color 0.22s ease;
+    }
+    .yt-slider:before {
+      position: absolute;
+      content: "";
+      height: 12px;
+      width: 12px;
+      left: 3px;
+      bottom: 3px;
+      background-color: #ffffff;
+      border-radius: 50%;
+      transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+    .yt-switch input:checked + .yt-slider {
+      background-color: #3ea6ff;
+    }
+    .yt-switch input:checked + .yt-slider:before {
+      transform: translateX(16px);
+      background-color: #ffffff;
     }
 
     .ctrl-btn.play-btn {
@@ -1748,8 +1962,19 @@
       }
 
       /* Mobile Binge Control Bar */
+      body.mode-max .binge-control-bar,
       .binge-control-bar {
+        position: static !important;
+        transform: none !important;
         max-width: 100% !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+        border-radius: 0 !important;
+        background: #121212 !important;
+        box-shadow: none !important;
+        border: none !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
         padding: 6px 10px !important;
         gap: 6px !important;
         justify-content: space-between !important;
@@ -1761,12 +1986,30 @@
         height: 32px !important;
         padding: 0 10px !important;
         font-size: 12px !important;
-        border-radius: 6px !important;
+        border-radius: 16px !important;
       }
-      .binge-control-bar .toggle-label {
-        font-size: 11px !important;
-        gap: 4px !important;
+      .bottom-binge-trigger {
+        display: none !important;
+      }
+      .yt-switch-wrap {
+        gap: 5px !important;
         margin-left: 2px !important;
+      }
+      .yt-switch-label {
+        font-size: 11px !important;
+      }
+      .yt-switch {
+        width: 30px !important;
+        height: 16px !important;
+      }
+      .yt-slider:before {
+        width: 10px !important;
+        height: 10px !important;
+        bottom: 3px !important;
+        left: 3px !important;
+      }
+      .yt-switch input:checked + .yt-slider:before {
+        transform: translateX(14px) !important;
       }
 
       /* Progress Bar Touch Scrubbing */
@@ -2129,9 +2372,12 @@
           <div class="bcb-group bcb-left">
             <button id="prev-btn" class="ctrl-btn" title="이전 영상 (Shift+Left / P)">⏮ 이전</button>
             <button id="next-btn" class="ctrl-btn primary" title="다음 영상 (Shift+Right / N)">다음 ⏭</button>
-            <label class="toggle-label" title="영상 종료 시 자동으로 다음 영상 재생">
-              <input type="checkbox" id="auto-play-next" checked>
-              <span>자동 다음</span>
+            <label class="yt-switch-wrap" title="영상 종료 시 자동으로 다음 영상 재생">
+              <span class="yt-switch-label">자동 다음</span>
+              <span class="yt-switch">
+                <input type="checkbox" id="auto-play-next" checked>
+                <span class="yt-slider"></span>
+              </span>
             </label>
           </div>
 
@@ -2143,6 +2389,12 @@
             <button id="toggle-watched-btn" class="ctrl-btn" title="시청 완료 체크">✓ 완료</button>
             <button id="clear-watched-btn" class="ctrl-btn subtle-btn" title="모든 시청 완료(✓) 기록 초기화">기록 초기화</button>
           </div>
+        </div>
+
+        <!-- Floating trigger pill in maximize mode when binge bar is auto-hidden -->
+        <div class="bottom-binge-trigger" id="bottom-binge-trigger" title="연속 재생 제어 바 열기">
+          <span class="bbt-icon">⌃</span>
+          <span class="bbt-text">재생 제어</span>
         </div>
       </div>
     </main>
@@ -2849,6 +3101,7 @@
       const displayNumber = isAscending ? (currentChannel.videos.length - video.originalIndex + 1) : video.originalIndex;
       currentTitleEl.innerText = `${displayNumber}. ${video.title}`;
       document.title = `${displayNumber}. ${video.title} - 정주행`;
+      if (typeof showBingeBar === "function") showBingeBar(4000);
 
       // Update Header Stats: Upload Date & View Count
       const statDate = document.getElementById("stat-upload-date");
@@ -3025,11 +3278,11 @@
       const toggleBtn = document.getElementById("toggle-watched-btn");
       if (!video || !toggleBtn) return;
       if (watchedSet.has(video.id)) {
-        toggleBtn.innerText = "✓ 시청완료됨 (취소)";
-        toggleBtn.style.color = "#e0e0e0";
+        toggleBtn.innerText = "✓ 완료됨 (취소)";
+        toggleBtn.classList.add("active");
       } else {
-        toggleBtn.innerText = "✓ 시청 완료로 표시";
-        toggleBtn.style.color = "";
+        toggleBtn.innerText = "✓ 완료";
+        toggleBtn.classList.remove("active");
       }
     }
 
@@ -3194,14 +3447,17 @@
                 updateQualityOptions();
                 applySubtitlesState();
                 setTimeout(applySubtitlesState, 500);
+                if (typeof showBingeBar === "function") showBingeBar(3000);
               }
 
               if (event.data === YT.PlayerState.PAUSED) {
                 if (typeof updatePlayPauseUI === "function") updatePlayPauseUI(false);
                 saveCurrentPlayingPosition();
+                if (typeof showBingeBar === "function") showBingeBar(0);
               }
               if (event.data === YT.PlayerState.ENDED) {
                 if (typeof updatePlayPauseUI === "function") updatePlayPauseUI(false);
+                if (typeof showBingeBar === "function") showBingeBar(4000);
                 let curVid = (currentIndex >= 0 && currentIndex < displayList.length) ? displayList[currentIndex] : null;
                 if (!curVid && currentPlayingVideoId && currentChannel && currentChannel.videos) {
                   curVid = currentChannel.videos.find(v => v.id === currentPlayingVideoId);
@@ -3456,9 +3712,68 @@
     const modeLarge = document.getElementById("mode-large");
     const modeMax = document.getElementById("mode-max");
     const rightTrigger = document.getElementById("right-edge-trigger");
+    const bingeControlBar = document.getElementById("binge-control-bar");
+    const bottomBingeTrigger = document.getElementById("bottom-binge-trigger");
 
     let currentScreenMode = "large";
     let rightMenuTimer = null;
+    let bingeBarHideTimer = null;
+    let isBingeBarHovered = false;
+
+    function showBingeBar(autoHideAfter = 3000) {
+      if (!bingeControlBar) return;
+      bingeControlBar.classList.remove("is-hidden");
+      clearTimeout(bingeBarHideTimer);
+
+      if (autoHideAfter > 0 && document.body.classList.contains("mode-max")) {
+        bingeBarHideTimer = setTimeout(() => {
+          if (!isBingeBarHovered) {
+            hideBingeBar();
+          }
+        }, autoHideAfter);
+      }
+    }
+
+    function hideBingeBar() {
+      if (!bingeControlBar || !document.body.classList.contains("mode-max")) return;
+      if (isBingeBarHovered) return;
+      bingeControlBar.classList.add("is-hidden");
+    }
+
+    if (bingeControlBar) {
+      bingeControlBar.addEventListener("mouseenter", () => {
+        isBingeBarHovered = true;
+        clearTimeout(bingeBarHideTimer);
+        showBingeBar(0);
+      });
+      bingeControlBar.addEventListener("mouseleave", () => {
+        isBingeBarHovered = false;
+        if (document.body.classList.contains("mode-max")) {
+          showBingeBar(2500);
+        }
+      });
+    }
+
+    if (bottomBingeTrigger) {
+      bottomBingeTrigger.addEventListener("mouseenter", () => {
+        showBingeBar(3500);
+      });
+      bottomBingeTrigger.addEventListener("click", () => {
+        showBingeBar(4000);
+      });
+    }
+
+    // Persist Auto-Play Next preference across sessions
+    const autoPlayNextEl = document.getElementById("auto-play-next");
+    if (autoPlayNextEl) {
+      const savedAutoPlay = localStorage.getItem("binge_auto_play_next");
+      if (savedAutoPlay !== null) {
+        autoPlayNextEl.checked = (savedAutoPlay === "true");
+      }
+      autoPlayNextEl.addEventListener("change", (e) => {
+        localStorage.setItem("binge_auto_play_next", e.target.checked);
+      });
+    }
 
     function revealSidebar() {
       if (!document.body.classList.contains("mode-max")) return;
@@ -3497,7 +3812,14 @@
       if (window.innerWidth <= 768 || !document.body.classList.contains("mode-max")) return;
 
       const winW = window.innerWidth;
+      const winH = window.innerHeight;
       const mouseX = e.clientX;
+      const mouseY = e.clientY;
+
+      // Bottom edge detection: mouse in lower 90px of screen reveals floating binge bar
+      if (mouseY >= winH - 90) {
+        showBingeBar(3500);
+      }
 
       // Right edge detection: mouse within 35px of right screen edge
       if (mouseX >= winW - 35) {
@@ -3520,6 +3842,9 @@
             activeEl.blur();
           }
           hideSidebar(true);
+          if (bingeControlBar && !bingeControlBar.contains(activeEl) && !isBingeBarHovered) {
+            hideBingeBar();
+          }
         }
       });
     }
@@ -3543,6 +3868,11 @@
       if (mode === "large") {
         document.body.classList.remove("mode-max");
         sidebar.classList.remove("hidden", "revealed");
+        if (bingeControlBar) {
+          bingeControlBar.classList.remove("is-hidden");
+          clearTimeout(bingeBarHideTimer);
+          isBingeBarHovered = false;
+        }
         if (window.innerWidth > 768) {
           const savedW = localStorage.getItem("binge_sidebar_width");
           sidebar.style.width = (savedW && parseInt(savedW, 10) >= 360) ? savedW : "370px";
@@ -3557,6 +3887,7 @@
         sidebar.classList.remove("hidden", "revealed");
         resizer.style.display = "none";
         if (modeMax) modeMax.classList.add("active");
+        showBingeBar(3500);
       }
     }
 
