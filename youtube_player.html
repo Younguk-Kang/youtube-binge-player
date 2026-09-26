@@ -2943,7 +2943,7 @@
             player.loadVideoById(video.id);
           }
 
-          const sp = parseFloat(speedSelect.value) || 1;
+          const sp = speedSelect ? (parseFloat(speedSelect.value) || 1) : 1;
           if (typeof player.setPlaybackRate === "function") {
             player.setPlaybackRate(sp);
           }
@@ -3157,7 +3157,7 @@
                 if (muteBtn) muteBtn.innerText = (parseInt(volumeSlider?.value || 100, 10) > 50) ? "🔊" : "🔉";
               }
 
-              const sp = parseFloat(speedSelect.value) || 1;
+              const sp = speedSelect ? (parseFloat(speedSelect.value) || 1) : 1;
               if (player && player.setPlaybackRate) player.setPlaybackRate(sp);
 
               const targetVid = pendingVideoId || initialVideoId;
@@ -3270,21 +3270,25 @@
       updateSubtitlesButton();
     }
 
-    errorSkipBtn.addEventListener("click", () => {
-      if (currentIndex === -1 && displayList.length > 0) {
-        playVideoByIndex(0);
-      } else if (currentIndex >= 0 && currentIndex + 1 < displayList.length) {
-        playVideoByIndex(currentIndex + 1);
-      }
-    });
+    if (errorSkipBtn) {
+      errorSkipBtn.addEventListener("click", () => {
+        if (currentIndex === -1 && displayList.length > 0) {
+          playVideoByIndex(0);
+        } else if (currentIndex >= 0 && currentIndex + 1 < displayList.length) {
+          playVideoByIndex(currentIndex + 1);
+        }
+      });
+    }
 
     // Speed Control
-    speedSelect.addEventListener("change", () => {
-      const sp = parseFloat(speedSelect.value);
-      if (isPlayerReady && player && typeof player.setPlaybackRate === "function") {
-        player.setPlaybackRate(sp);
-      }
-    });
+    if (speedSelect) {
+      speedSelect.addEventListener("change", () => {
+        const sp = parseFloat(speedSelect.value);
+        if (isPlayerReady && player && typeof player.setPlaybackRate === "function") {
+          player.setPlaybackRate(sp);
+        }
+      });
+    }
 
     // Button Controls
     document.getElementById("prev-btn").addEventListener("click", () => {
@@ -4280,7 +4284,7 @@
         toggleSidebar();
       } else if (e.key === "[" || e.key === "]") {
         const speeds = [0.75, 1, 1.25, 1.5, 1.75, 2];
-        let currentRate = parseFloat(speedSelect.value) || 1;
+        let currentRate = speedSelect ? (parseFloat(speedSelect.value) || 1) : 1;
         let curIdx = speeds.indexOf(currentRate);
         if (curIdx === -1) curIdx = 1;
         if (e.key === "[") {
@@ -4289,7 +4293,7 @@
           curIdx = Math.min(speeds.length - 1, curIdx + 1);
         }
         const newRate = speeds[curIdx];
-        speedSelect.value = String(newRate);
+        if (speedSelect) speedSelect.value = String(newRate);
         if (isPlayerReady && player && typeof player.setPlaybackRate === "function") {
           player.setPlaybackRate(newRate);
         }

@@ -553,15 +553,15 @@ def fetch_youtube_channel(channel_input, force=False):
 
         return tab_vids
 
-    # 1. Fetch "동영상" (Videos) tab: EgZ2aWRlb3PyBgQKAjoA
-    videos_tab_list = fetch_tab_videos("EgZ2aWRlb3PyBgQKAjoA", max_tab_videos=3000, max_pages=80, time_budget=30)
+    # 1. Fetch "동영상" (Videos) tab: EgZ2aWRlb3PyBgQKAjoA (Max 15s budget)
+    videos_tab_list = fetch_tab_videos("EgZ2aWRlb3PyBgQKAjoA", max_tab_videos=3000, max_pages=80, time_budget=15)
     videos.extend(videos_tab_list)
 
-    # 2. Fetch "라이브" (Streams / Replays) tab: EgdzdHJlYW1z8gYECgJ6AA==
+    # 2. Fetch "라이브" (Streams / Replays) tab: EgdzdHJlYW1z8gYECgJ6AA== (Stay well under Cloudflare 30s timeout)
     elapsed = time.time() - start_total_time
-    if elapsed < 35 or len(videos) == 0:
-        remain_budget = max(10, 42 - int(elapsed))
-        streams_tab_list = fetch_tab_videos("EgdzdHJlYW1z8gYECgJ6AA==", max_tab_videos=1000, max_pages=40, time_budget=remain_budget)
+    if elapsed < 16 or len(videos) == 0:
+        remain_budget = max(4, min(6, 21 - int(elapsed)))
+        streams_tab_list = fetch_tab_videos("EgdzdHJlYW1z8gYECgJ6AA==", max_tab_videos=1000, max_pages=30, time_budget=remain_budget)
         videos.extend(streams_tab_list)
 
     if not videos:
