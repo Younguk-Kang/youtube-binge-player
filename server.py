@@ -614,6 +614,13 @@ class PlayerHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
 
+        if parsed.path in ("/ping", "/health"):
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(b'{"status":"ok"}')
+            return
+
         if parsed.path == "/favicon.ico":
             self.send_response(204)
             self.end_headers()
