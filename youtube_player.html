@@ -299,23 +299,25 @@
       height: 100%;
       min-height: 0;
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
       position: relative;
       background: #000;
+      overflow: hidden;
     }
 
     .video-wrapper {
       width: 100%;
-      height: 100%;
-      max-height: 100%;
-      max-width: calc(100vh * (16 / 9));
+      flex: 1 1 auto;
+      min-height: 0;
+      max-width: calc((100vh - 48px) * (16 / 9));
       aspect-ratio: 16 / 9;
       background: #000;
       position: relative;
       overflow: hidden;
       box-shadow: 0 4px 30px rgba(0, 0, 0, 0.8);
-      cursor: default; /* Keep cursor always normal! */
+      cursor: default;
     }
 
     .video-wrapper:fullscreen,
@@ -327,9 +329,53 @@
       border-radius: 0 !important;
       box-shadow: none !important;
     }
-    .video-wrapper:fullscreen .video-controls-overlay,
-    .video-wrapper:-webkit-full-screen .video-controls-overlay {
-      padding: 50px 26px 22px;
+
+    /* Binge Toolbar (Dedicated bar below YouTube Player) */
+    .binge-control-bar {
+      width: 100%;
+      max-width: calc((100vh - 48px) * (16 / 9));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 6px 14px;
+      background: #141414;
+      border-top: 1px solid #282828;
+      box-sizing: border-box;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .bcb-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .bcb-left {
+      flex-shrink: 0;
+    }
+
+    .bcb-center {
+      flex: 1;
+      min-width: 0;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .bcb-center .video-title-text {
+      display: inline-block;
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 13px;
+      font-weight: 600;
+      color: #eee;
+    }
+
+    .bcb-right {
+      flex-shrink: 0;
     }
 
     /* Screen Maximize (화면 최대화) & Fullscreen Styles */
@@ -337,11 +383,20 @@
       height: 100vh !important;
     }
 
+    body.mode-max .video-container {
+      width: 100vw !important;
+      height: 100vh !important;
+    }
+
     body.mode-max .video-wrapper {
-      max-width: calc(100vh * (16 / 9)) !important;
-      max-height: 100vh !important;
+      max-width: calc((100vh - 48px) * (16 / 9)) !important;
+      max-height: calc(100vh - 48px) !important;
       width: 100% !important;
       height: 100% !important;
+    }
+
+    body.mode-max .binge-control-bar {
+      max-width: calc((100vh - 48px) * (16 / 9)) !important;
     }
 
     /* Right Sidebar in mode-max (slides in from right smoothly) */
@@ -397,7 +452,12 @@
       height: 100%;
       border: none;
       display: block;
-      pointer-events: none; /* Mouse interaction is handled by video-click-layer and controls overlay */
+      pointer-events: auto !important; /* Direct mouse/touch interaction with YouTube native controls */
+    }
+
+    .video-click-layer,
+    .video-controls-overlay {
+      display: none !important;
     }
 
     /* Video Click Layer (Single click play/pause, Double click fullscreen) */
@@ -1672,130 +1732,41 @@
       }
       body.mode-max .video-wrapper,
       body .video-wrapper,
+      .video-container {
+        flex: 0 0 auto !important;
+        width: 100% !important;
+        height: auto !important;
+      }
       .video-wrapper {
         width: 100% !important;
-        height: 100% !important;
+        height: auto !important;
         max-width: 100% !important;
         max-height: none !important;
-        aspect-ratio: 16 / 9;
+        aspect-ratio: 16 / 9 !important;
         border-radius: 0 !important;
+        flex: 0 0 auto !important;
       }
 
-      /* Simplified Mobile Video Controls */
-      .video-controls-overlay {
-        padding: 16px 8px 8px !important;
-      }
-      .volume-container {
-        display: none !important;
-      }
-      .video-title-text {
-        display: none !important;
-      }
-      #toggle-watched-btn,
-      #clear-watched-btn,
-      .toggle-label {
-        display: none !important;
-      }
-      .overlay-controls-row {
-        gap: 3px !important;
-        padding: 0 !important;
+      /* Mobile Binge Control Bar */
+      .binge-control-bar {
+        max-width: 100% !important;
+        padding: 6px 10px !important;
+        gap: 6px !important;
         justify-content: space-between !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-        display: flex !important;
-        align-items: center !important;
       }
-      .ctrl-group {
-        gap: 3px !important;
-        display: flex !important;
-        align-items: center !important;
-        flex-wrap: nowrap !important;
-      }
-      .ctrl-left {
-        flex-shrink: 1 !important;
-        min-width: 0 !important;
-      }
-      .ctrl-right {
-        flex-shrink: 0 !important;
-      }
-      .ctrl-btn {
-        padding: 3px 5px !important;
-        font-size: 12px !important;
-        min-height: 30px !important;
-        min-width: 28px !important;
-        height: 30px !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        border-radius: 6px !important;
-        flex-shrink: 0 !important;
-      }
-      #play-pause-btn {
-        padding: 3px 6px !important;
-        min-width: 44px !important;
-        height: 30px !important;
-        gap: 2px !important;
-      }
-      #play-pause-btn .pp-icon {
-        font-size: 10px !important;
-      }
-      #play-pause-btn .pp-text {
-        font-size: 11px !important;
-        font-weight: 700 !important;
-      }
-      #prev-btn, #next-btn {
-        padding: 3px 4px !important;
-        min-width: 26px !important;
-        height: 30px !important;
-        font-size: 12px !important;
-      }
-      #fullscreen-btn {
-        font-size: 14px !important;
-        padding: 3px 6px !important;
-        min-width: 30px !important;
-        height: 30px !important;
-        background: rgba(255, 255, 255, 0.22) !important;
-        font-weight: bold !important;
-        border-color: rgba(255, 255, 255, 0.4) !important;
-        flex-shrink: 0 !important;
-      }
-      #subtitles-btn {
-        font-size: 11px !important;
-        padding: 3px 5px !important;
-        height: 30px !important;
-        min-width: 28px !important;
-      }
-      #subtitles-btn .sub-text {
+      .binge-control-bar .bcb-center {
         display: none !important;
       }
-      .ctrl-select {
-        padding: 2px 3px !important;
-        font-size: 11px !important;
-        height: 30px !important;
-        border-radius: 6px !important;
-        text-align: center !important;
-      }
-      #quality-select {
-        display: inline-flex !important;
-        min-width: 44px !important;
-        max-width: 58px !important;
-      }
-      #speed-select {
-        display: inline-flex !important;
-        min-width: 40px !important;
-        max-width: 46px !important;
-      }
-      .time-display {
-        font-size: 10px !important;
-        padding: 0 1px !important;
-        letter-spacing: -0.5px !important;
-        white-space: nowrap !important;
-        color: rgba(255, 255, 255, 0.85) !important;
-        overflow: hidden !important;
-      }
-      .center-pause-badge {
-        padding: 6px 14px !important;
+      .binge-control-bar .ctrl-btn {
+        height: 32px !important;
+        padding: 0 10px !important;
         font-size: 12px !important;
+        border-radius: 6px !important;
+      }
+      .binge-control-bar .toggle-label {
+        font-size: 11px !important;
+        gap: 4px !important;
+        margin-left: 2px !important;
       }
 
       /* Progress Bar Touch Scrubbing */
@@ -2142,84 +2113,6 @@
           <div class="toast-msg" id="toast-msg"></div>
           <div id="yt-iframe"></div>
 
-          <!-- Transparent Click Layer for Single-Click Play/Pause & Double-Click Fullscreen -->
-          <div class="video-click-layer" id="video-click-layer">
-            <div class="center-ripple" id="center-ripple">▶</div>
-            <div class="center-pause-badge" id="center-pause-badge">
-              <span class="cpb-icon">⏸</span>
-              <span class="cpb-text">일시정지</span>
-            </div>
-          </div>
-
-          <!-- Modern On-Screen Controls Overlay (Instant hide on mouseleave, 0s delay) -->
-          <div class="video-controls-overlay" id="video-controls-overlay">
-            <!-- Progress Bar Scrubber -->
-            <div class="progress-track" id="progress-track" title="클릭/드래그하여 원하는 구간으로 이동">
-              <div class="progress-buffered" id="progress-buffered"></div>
-              <div class="progress-fill" id="progress-fill"></div>
-              <div class="progress-thumb" id="progress-thumb"></div>
-              <div class="progress-time-tooltip" id="progress-tooltip">00:00</div>
-            </div>
-
-            <!-- Controls Row -->
-            <div class="overlay-controls-row">
-              <div class="ctrl-group ctrl-left">
-                <button id="play-pause-btn" class="ctrl-btn play-btn is-paused" title="재생 시작 (단축키: Space / K)">
-                  <span class="pp-icon">⏸</span><span class="pp-text">정지</span>
-                </button>
-                <button id="prev-btn" class="ctrl-btn" title="이전 영상 (Shift+Left)">⏮</button>
-                <button id="next-btn" class="ctrl-btn primary" title="다음 영상 (Shift+Right)">⏭</button>
-
-                <div class="volume-container" title="음량 조절 (단축키: M 음소거, ↑/↓ 볼륨)">
-                  <button id="mute-btn" class="ctrl-btn" style="padding:4px 7px;">🔊</button>
-                  <input type="range" id="volume-slider" min="0" max="100" value="100" class="volume-slider">
-                </div>
-
-                <span id="time-display" class="time-display">00:00 / 00:00</span>
-              </div>
-
-              <div class="ctrl-group ctrl-center">
-                <span class="video-title-text" id="current-title">채널을 추가해 주세요</span>
-              </div>
-
-              <div class="ctrl-group ctrl-right">
-                <!-- Video Quality Selector -->
-                <select id="quality-select" class="ctrl-select" title="화질 조절 (1080p, 720p, 자동 등)">
-                  <option value="auto" selected>자동</option>
-                  <option value="hd1080">1080p</option>
-                  <option value="hd720">720p</option>
-                  <option value="large">480p</option>
-                  <option value="medium">360p</option>
-                </select>
-
-                <!-- Playback speed -->
-                <select id="speed-select" class="ctrl-select" title="재생 속도 조절">
-                  <option value="0.75">0.75x</option>
-                  <option value="1" selected>1.0x</option>
-                  <option value="1.25">1.25x</option>
-                  <option value="1.5">1.5x</option>
-                  <option value="1.75">1.75x</option>
-                  <option value="2">2.0x</option>
-                </select>
-
-                <!-- Subtitles Toggle Button -->
-                <button id="subtitles-btn" class="ctrl-btn" title="자막 켜기/끄기 (단축키: C)">
-                  <span class="sub-icon">💬</span><span class="sub-text"> 자막</span>
-                </button>
-
-                <button id="toggle-watched-btn" class="ctrl-btn" title="시청 완료 체크">✓ 완료</button>
-                <button id="clear-watched-btn" class="ctrl-btn subtle-btn" title="모든 시청 완료(✓) 기록 초기화" style="color:#888; font-size:11px;">초기화</button>
-
-                <label class="toggle-label" title="영상 종료 시 자동으로 다음 영상 재생" style="margin-left: 2px;">
-                  <input type="checkbox" id="auto-play-next" checked>
-                  자동 다음
-                </label>
-
-                <button id="fullscreen-btn" class="ctrl-btn" title="전체화면 (F)">⛶</button>
-              </div>
-            </div>
-          </div>
-
           <!-- Error notice banner -->
           <div class="player-error-overlay" id="player-error-overlay">
             <h3 style="font-size:15px; color:#e0e0e0;">⚠️ 이 영상은 외부 재생이 제한되어 있습니다.</h3>
@@ -2228,6 +2121,27 @@
               <a id="error-yt-link" href="#" target="_blank" rel="noopener" style="background:#2b2b2b; border:1px solid #444; color:#fff; padding:6px 14px; border-radius:6px; font-size:12px; text-decoration:none; font-weight:600;">유튜브에서 직접 보기 ↗</a>
               <button id="error-skip-btn" class="primary" style="padding:6px 14px; font-size:12px;">다음 영상으로 넘어가기 ⏭</button>
             </div>
+          </div>
+        </div>
+
+        <!-- Binge Toolbar (Dedicated bar below YouTube Player) -->
+        <div class="binge-control-bar" id="binge-control-bar">
+          <div class="bcb-group bcb-left">
+            <button id="prev-btn" class="ctrl-btn" title="이전 영상 (Shift+Left / P)">⏮ 이전</button>
+            <button id="next-btn" class="ctrl-btn primary" title="다음 영상 (Shift+Right / N)">다음 ⏭</button>
+            <label class="toggle-label" title="영상 종료 시 자동으로 다음 영상 재생">
+              <input type="checkbox" id="auto-play-next" checked>
+              <span>자동 다음</span>
+            </label>
+          </div>
+
+          <div class="bcb-group bcb-center">
+            <span class="video-title-text" id="current-title">채널을 추가해 주세요</span>
+          </div>
+
+          <div class="bcb-group bcb-right">
+            <button id="toggle-watched-btn" class="ctrl-btn" title="시청 완료 체크">✓ 완료</button>
+            <button id="clear-watched-btn" class="ctrl-btn subtle-btn" title="모든 시청 완료(✓) 기록 초기화">기록 초기화</button>
           </div>
         </div>
       </div>
@@ -3211,7 +3125,7 @@
           videoId: initialVideoId,
           playerVars: {
             enablejsapi: 1,
-            controls: 0,
+            controls: 1,
             rel: 0,
             iv_load_policy: 3,
             modestbranding: 1,
