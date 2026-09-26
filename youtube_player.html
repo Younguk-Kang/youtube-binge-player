@@ -1069,7 +1069,7 @@
       background-color: #1a1a1a;
       border: 1.5px solid #3c3c3c;
       color: #fff;
-      padding: 6px 48px 6px 26px;
+      padding: 6px 95px 6px 26px;
       border-radius: 6px;
       font-size: 12px;
       outline: none;
@@ -1081,9 +1081,38 @@
       background-color: #202020;
     }
 
-    .search-count-badge {
+    .search-trailing {
       position: absolute;
       right: 7px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      z-index: 2;
+    }
+
+    .search-clear-btn {
+      position: static;
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 12px;
+      cursor: pointer;
+      padding: 2px 5px;
+      border-radius: 3px;
+      line-height: 1;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s, background-color 0.15s;
+    }
+
+    .search-clear-btn:hover {
+      color: #fff;
+      background-color: #333;
+    }
+
+    .search-count-badge {
+      position: static;
       font-size: 10px;
       color: #777;
       font-weight: 600;
@@ -1093,6 +1122,7 @@
       border: 1px solid #383838;
       pointer-events: none;
       user-select: none;
+      white-space: nowrap;
     }
 
     .toolbar-actions {
@@ -1880,6 +1910,15 @@
       }
       .search-input {
         font-size: 16px !important; /* Prevents iOS auto-zoom */
+        padding-right: 98px !important;
+      }
+      .search-trailing {
+        right: 8px !important;
+        gap: 6px !important;
+      }
+      .search-clear-btn {
+        font-size: 14px !important;
+        padding: 4px 6px !important;
       }
       .search-count-badge {
         font-size: 11px !important;
@@ -2248,8 +2287,11 @@
         <!-- Search Bar with Integrated Count -->
         <div class="search-wrap">
           <span class="search-icon">🔍</span>
-          <input type="text" id="search-box" class="search-input" placeholder="영상 검색...">
-          <span id="list-count" class="search-count-badge">0개</span>
+          <input type="text" id="search-box" class="search-input" placeholder="영상 검색..." autocomplete="off">
+          <div class="search-trailing">
+            <button id="search-clear-btn" class="search-clear-btn" title="검색어 지우기" style="display: none;">✕</button>
+            <span id="list-count" class="search-count-badge">0개</span>
+          </div>
         </div>
         
         <!-- Filter & Quick Action Buttons -->
@@ -2649,6 +2691,8 @@
 
       const searchBox = document.getElementById("search-box");
       if (searchBox) searchBox.value = "";
+      const searchClearBtn = document.getElementById("search-clear-btn");
+      if (searchClearBtn) searchClearBtn.style.display = "none";
 
       prepareList(true);
 
@@ -2691,7 +2735,13 @@
       }
 
       if (query) {
-        list = list.filter(v => v.title.toLowerCase().includes(query));
+        const qWords = query.split(/\s+/).filter(Boolean);
+        if (qWords.length > 0) {
+          list = list.filter(v => {
+            const t = (v.title || "").toLowerCase();
+            return qWords.every(w => t.includes(w));
+          });
+        }
       }
 
       displayList = list;
@@ -2701,10 +2751,10 @@
         if (found >= 0) {
           currentIndex = found;
         } else {
-          currentIndex = 0;
+          currentIndex = query ? -1 : 0;
         }
       } else {
-        currentIndex = 0;
+        currentIndex = (query || displayList.length === 0) ? -1 : 0;
       }
 
       renderList(shouldScroll);
@@ -2726,13 +2776,17 @@
 
     function renderList(shouldScroll = false) {
       const container = videoListContainer || document.getElementById("video-list");
-      document.getElementById("list-count").innerText = `${displayList.length}개`;
+      const query = document.getElementById("search-box") ? document.getElementById("search-box").value.trim() : "";
+      const countBadge = document.getElementById("list-count");
+      if (countBadge) {
+        countBadge.innerText = query ? `검색 ${displayList.length}개` : `${displayList.length}개`;
+      }
 
       if (displayList.length === 0) {
         if (!currentChannel || channels.length === 0) {
           container.innerHTML = '<div style="padding:40px 20px;text-align:center;color:#888;font-size:13px;line-height:1.7;">등록된 채널이 없습니다.<br><span style="color:#3ea6ff;font-weight:bold;">[+ 채널]</span> 버튼을 눌러 시청할 채널을 추가해 보세요!</div>';
         } else {
-          container.innerHTML = '<div style="padding:24px;text-align:center;color:#888;font-size:12px;">동영상이 없거나 검색 결과가 없습니다.</div>';
+          container.innerHTML = `<div style="padding:28px 16px;text-align:center;color:#888;font-size:12px;line-height:1.6;">'${escapeText(query)}' 검색 결과가 없습니다.<br><span style="color:#666;font-size:11px;display:inline-block;margin-top:6px;">검색어를 확인하거나 ESC 키를 눌러 전체 목록으로 돌아가세요.</span></div>`;
         }
         return;
       }
@@ -2749,7 +2803,7 @@
           watchedSet.delete(video.id);
           watchedChanged = true;
         }
-        const isCurrent = index === currentIndex;
+        const isCurrent = (currentIndex >= 0 && index === currentIndex);
         const isWatched = watchedSet.has(video.id);
         const isLastWatched = (video.id === lastVideoId);
 
@@ -2813,7 +2867,10 @@
     function saveCurrentPlayingPosition() {
       if (!currentChannel) return;
       const chId = getChannelId(currentChannel);
-      const curVid = displayList[currentIndex];
+      let curVid = (currentIndex >= 0 && currentIndex < displayList.length) ? displayList[currentIndex] : null;
+      if (!curVid && currentPlayingVideoId && currentChannel.videos) {
+        curVid = currentChannel.videos.find(v => v.id === currentPlayingVideoId);
+      }
       if (!curVid) return;
 
       let curr = 0;
@@ -3029,20 +3086,28 @@
     }
 
     function markCurrentVideoAsWatched() {
-      const video = displayList[currentIndex];
+      let video = (currentIndex >= 0 && currentIndex < displayList.length) ? displayList[currentIndex] : null;
+      if (!video && currentPlayingVideoId && currentChannel && currentChannel.videos) {
+        video = currentChannel.videos.find(v => v.id === currentPlayingVideoId);
+      }
       if (!video) return;
       if (!watchedSet.has(video.id)) {
         watchedSet.add(video.id);
         saveWatched();
         const container = document.getElementById("video-list");
-        const currentItem = container.querySelector(`.video-item[data-index="${currentIndex}"]`);
-        if (currentItem) currentItem.classList.add("watched");
+        if (container && currentIndex >= 0) {
+          const currentItem = container.querySelector(`.video-item[data-index="${currentIndex}"]`);
+          if (currentItem) currentItem.classList.add("watched");
+        }
         updateToggleWatchedBtn();
       }
     }
 
     function updateToggleWatchedBtn() {
-      const video = displayList[currentIndex];
+      let video = (currentIndex >= 0 && currentIndex < displayList.length) ? displayList[currentIndex] : null;
+      if (!video && currentPlayingVideoId && currentChannel && currentChannel.videos) {
+        video = currentChannel.videos.find(v => v.id === currentPlayingVideoId);
+      }
       const toggleBtn = document.getElementById("toggle-watched-btn");
       if (!video || !toggleBtn) return;
       if (watchedSet.has(video.id)) {
@@ -3223,26 +3288,50 @@
               }
               if (event.data === YT.PlayerState.ENDED) {
                 if (typeof updatePlayPauseUI === "function") updatePlayPauseUI(false);
-                const curVid = displayList[currentIndex];
+                let curVid = (currentIndex >= 0 && currentIndex < displayList.length) ? displayList[currentIndex] : null;
+                if (!curVid && currentPlayingVideoId && currentChannel && currentChannel.videos) {
+                  curVid = currentChannel.videos.find(v => v.id === currentPlayingVideoId);
+                }
                 if (curVid) clearVideoPosition(curVid.id);
                 markCurrentVideoAsWatched();
 
                 const autoPlay = document.getElementById("auto-play-next").checked;
                 if (autoPlay) {
-                  if (currentIndex + 1 < displayList.length) {
-                    showToast("다음 영상으로 넘어갑니다 ⏭", 2000);
+                  const query = document.getElementById("search-box") ? document.getElementById("search-box").value.trim() : "";
+                  if (currentIndex === -1 && displayList.length > 0) {
+                    if (query) {
+                      showToast(`🔍 '${query}' 검색 영상 순차 재생 ⏭ (1/${displayList.length})`, 2200);
+                    } else {
+                      showToast("다음 영상으로 넘어갑니다 ⏭", 2000);
+                    }
+                    setTimeout(() => {
+                      playVideoByIndex(0);
+                    }, 600);
+                  } else if (currentIndex >= 0 && currentIndex + 1 < displayList.length) {
+                    if (query) {
+                      showToast(`검색 영상 다음으로 이동 ⏭ (${currentIndex + 2}/${displayList.length})`, 2000);
+                    } else {
+                      showToast("다음 영상으로 넘어갑니다 ⏭", 2000);
+                    }
                     setTimeout(() => {
                       playVideoByIndex(currentIndex + 1);
                     }, 600);
                   } else {
-                    showToast("🎉 정주행 완료! 채널의 마지막 영상까지 모두 시청했습니다!", 4000);
+                    if (query) {
+                      showToast(`🎉 '${query}' 검색 영상(${displayList.length}개)을 모두 정주행 완료했습니다!`, 4000);
+                    } else {
+                      showToast("🎉 정주행 완료! 채널의 마지막 영상까지 모두 시청했습니다!", 4000);
+                    }
                   }
                 }
               }
             },
             'onError': function(event) {
               isInitializingPlayer = false;
-              const video = displayList[currentIndex];
+              let video = (currentIndex >= 0 && currentIndex < displayList.length) ? displayList[currentIndex] : null;
+              if (!video && currentPlayingVideoId && currentChannel && currentChannel.videos) {
+                video = currentChannel.videos.find(v => v.id === currentPlayingVideoId);
+              }
               if (video) {
                 errorYtLink.href = `https://www.youtube.com/watch?v=${video.id}`;
                 errorOverlay.classList.add("show");
@@ -3268,7 +3357,9 @@
     }
 
     errorSkipBtn.addEventListener("click", () => {
-      if (currentIndex + 1 < displayList.length) {
+      if (currentIndex === -1 && displayList.length > 0) {
+        playVideoByIndex(0);
+      } else if (currentIndex >= 0 && currentIndex + 1 < displayList.length) {
         playVideoByIndex(currentIndex + 1);
       }
     });
@@ -3283,15 +3374,26 @@
 
     // Button Controls
     document.getElementById("prev-btn").addEventListener("click", () => {
-      if (currentIndex > 0) playVideoByIndex(currentIndex - 1);
+      if (currentIndex > 0) {
+        playVideoByIndex(currentIndex - 1);
+      } else if (currentIndex === -1 && displayList.length > 0) {
+        playVideoByIndex(0);
+      }
     });
 
     document.getElementById("next-btn").addEventListener("click", () => {
-      if (currentIndex + 1 < displayList.length) playVideoByIndex(currentIndex + 1);
+      if (currentIndex === -1 && displayList.length > 0) {
+        playVideoByIndex(0);
+      } else if (currentIndex >= 0 && currentIndex + 1 < displayList.length) {
+        playVideoByIndex(currentIndex + 1);
+      }
     });
 
     document.getElementById("toggle-watched-btn").addEventListener("click", () => {
-      const video = displayList[currentIndex];
+      let video = (currentIndex >= 0 && currentIndex < displayList.length) ? displayList[currentIndex] : null;
+      if (!video && currentPlayingVideoId && currentChannel && currentChannel.videos) {
+        video = currentChannel.videos.find(v => v.id === currentPlayingVideoId);
+      }
       if (!video) return;
       if (watchedSet.has(video.id)) {
         watchedSet.delete(video.id);
@@ -3303,7 +3405,7 @@
       }
       saveWatched();
       const container = document.getElementById("video-list");
-      const currentItem = container ? container.querySelector(`.video-item[data-index="${currentIndex}"]`) : null;
+      const currentItem = (container && currentIndex >= 0) ? container.querySelector(`.video-item[data-index="${currentIndex}"]`) : null;
       if (currentItem) {
         currentItem.classList.toggle("watched", watchedSet.has(video.id));
         const posTag = currentItem.querySelector(".resume-pos-tag");
@@ -3324,7 +3426,10 @@
     });
 
     function updateCurrentPlayingTitle() {
-      const currentVideo = displayList[currentIndex];
+      let currentVideo = (currentIndex >= 0 && currentIndex < displayList.length) ? displayList[currentIndex] : null;
+      if (!currentVideo && currentPlayingVideoId && currentChannel && currentChannel.videos) {
+        currentVideo = currentChannel.videos.find(v => v.id === currentPlayingVideoId);
+      }
       if (currentVideo && currentChannel && currentChannel.videos) {
         const totalCount = currentChannel.videos.length;
         const displayNumber = isAscending ? (totalCount - currentVideo.originalIndex + 1) : currentVideo.originalIndex;
@@ -3383,18 +3488,44 @@
       });
     }
 
-    // Search Box with 120ms debounce
+    // Search Box with 120ms debounce and clear button
     const searchBox = document.getElementById("search-box");
+    const searchClearBtn = document.getElementById("search-clear-btn");
     let searchDebounce = null;
+
+    if (searchClearBtn) {
+      searchClearBtn.addEventListener("click", () => {
+        searchBox.value = "";
+        searchClearBtn.style.display = "none";
+        prepareList(true);
+        showToast("전체 영상 목록을 표시합니다.", 1500);
+      });
+    }
+
     searchBox.addEventListener("input", () => {
+      if (searchClearBtn) {
+        searchClearBtn.style.display = searchBox.value.trim().length > 0 ? "flex" : "none";
+      }
       clearTimeout(searchDebounce);
       searchDebounce = setTimeout(() => {
         prepareList(false); // don't jump scroll while typing
       }, 120);
     });
+
     searchBox.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        searchBox.blur();
+        if (displayList.length > 0) {
+          playVideoByIndex(0);
+          const q = searchBox.value.trim();
+          showToast(`🔍 '${q}' 검색 영상(${displayList.length}개) 순차 재생을 시작합니다!`, 2200);
+        } else {
+          showToast("검색된 영상이 없습니다.", 2000);
+        }
+      } else if (e.key === "Escape") {
         searchBox.value = "";
+        if (searchClearBtn) searchClearBtn.style.display = "none";
         prepareList(true);
         searchBox.blur();
         if (document.body.classList.contains("mode-max")) {
@@ -4210,7 +4341,8 @@
           }
         }
       } else if ((e.key === "ArrowRight" && e.shiftKey) || (e.key === "N" && e.shiftKey)) {
-        if (currentIndex + 1 < displayList.length) playVideoByIndex(currentIndex + 1);
+        if (currentIndex === -1 && displayList.length > 0) playVideoByIndex(0);
+        else if (currentIndex >= 0 && currentIndex + 1 < displayList.length) playVideoByIndex(currentIndex + 1);
       } else if ((e.key === "ArrowLeft" && e.shiftKey) || (e.key === "P" && e.shiftKey)) {
         if (currentIndex > 0) playVideoByIndex(currentIndex - 1);
       } else if (e.key === "m" || e.key === "M") {

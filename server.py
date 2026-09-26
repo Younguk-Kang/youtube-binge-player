@@ -266,7 +266,7 @@ def parse_youtube_date_to_days(date_str):
     if not date_str:
         return 999999.0
     s = str(date_str).replace("스트리밍 시간:", "").replace("최초 공개:", "").replace("스트리밍됨", "").strip()
-    m_abs = re.search(r"(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})", s)
+    m_abs = re.search(r"(\d{4})[.-]\s*(\d{1,2})[.-]\s*(\d{1,2})", s)
     if m_abs:
         try:
             d = datetime(int(m_abs.group(1)), int(m_abs.group(2)), int(m_abs.group(3)))
@@ -284,6 +284,17 @@ def parse_youtube_date_to_days(date_str):
         if unit == "주": return float(val * 7)
         if unit in ("개월", "달"): return float(val * 30.5)
         if unit == "년": return float(val * 365.0)
+    m_en = re.search(r"(\d+)\s*(second|minute|hour|day|week|month|year)s?\s*ago", s, re.IGNORECASE)
+    if m_en:
+        val = int(m_en.group(1))
+        unit = m_en.group(2).lower()
+        if unit == "second": return val / 86400.0
+        if unit == "minute": return val / 1440.0
+        if unit == "hour": return val / 24.0
+        if unit == "day": return float(val)
+        if unit == "week": return float(val * 7)
+        if unit == "month": return float(val * 30.5)
+        if unit == "year": return float(val * 365.0)
     return 999999.0
 
 def fetch_youtube_channel(channel_input, force=False):
@@ -358,6 +369,8 @@ def fetch_youtube_channel(channel_input, force=False):
         if lvm.get("contentId"):
             meta = lvm.get("metadata", {}).get("lockupMetadataViewModel", {})
             title = meta.get("title", {}).get("content", "")
+            if not title and "runs" in meta.get("title", {}):
+                title = "".join(r.get("text", "") for r in meta.get("title", {}).get("runs", []))
             try:
                 m_rows = meta.get("metadata", {}).get("contentMetadataViewModel", {}).get("metadataRows", [])
                 for r in m_rows:
@@ -380,13 +393,14 @@ def fetch_youtube_channel(channel_input, force=False):
                 pass
         else:
             title = (
-                vr.get("title", {}).get("runs", [{}])[0].get("text", "")
+                "".join(r.get("text", "") for r in vr.get("title", {}).get("runs", []))
                 or vr.get("title", {}).get("simpleText", "")
             )
             duration = vr.get("lengthText", {}).get("simpleText", "")
             if not duration:
                 for ov in vr.get("thumbnailOverlays", []):
-                    t = ov.get("thumbnailOverlayTimeStatusRenderer", {}).get("text", {}).get("simpleText", "")
+                    t_rend = ov.get("thumbnailOverlayTimeStatusRenderer", {})
+                    t = t_rend.get("text", {}).get("simpleText", "") or "".join(r.get("text", "") for r in t_rend.get("text", {}).get("runs", []))
                     if ":" in t:
                         duration = t
                         break
@@ -853,6 +867,8 @@ class PlayerHandler(http.server.SimpleHTTPRequestHandler):
                     if lvm.get("contentId"):
                         meta = lvm.get("metadata", {}).get("lockupMetadataViewModel", {})
                         title = meta.get("title", {}).get("content", "")
+                        if not title and "runs" in meta.get("title", {}):
+                            title = "".join(r.get("text", "") for r in meta.get("title", {}).get("runs", []))
                         try:
                             m_rows = meta.get("metadata", {}).get("contentMetadataViewModel", {}).get("metadataRows", [])
                             for r in m_rows:
@@ -874,11 +890,12 @@ class PlayerHandler(http.server.SimpleHTTPRequestHandler):
                         except Exception:
                             pass
                     else:
-                        title = vr.get("title", {}).get("runs", [{}])[0].get("text", "") or vr.get("title", {}).get("simpleText", "")
+                        title = "".join(r.get("text", "") for r in vr.get("title", {}).get("runs", [])) or vr.get("title", {}).get("simpleText", "")
                         duration = vr.get("lengthText", {}).get("simpleText", "")
                         if not duration:
                             for ov in vr.get("thumbnailOverlays", []):
-                                t = ov.get("thumbnailOverlayTimeStatusRenderer", {}).get("text", {}).get("simpleText", "")
+                                t_rend = ov.get("thumbnailOverlayTimeStatusRenderer", {})
+                                t = t_rend.get("text", {}).get("simpleText", "") or "".join(r.get("text", "") for r in t_rend.get("text", {}).get("runs", []))
                                 if ":" in t:
                                     duration = t
                                     break
