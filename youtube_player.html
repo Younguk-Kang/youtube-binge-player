@@ -428,55 +428,6 @@
       transform: translateX(-50%) translateY(16px);
     }
 
-    /* Floating trigger pill in maximize mode when binge bar is auto-hidden */
-    .bottom-binge-trigger {
-      display: none;
-      position: absolute;
-      bottom: 12px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(22, 22, 22, 0.82);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      border-radius: 20px;
-      padding: 5px 14px;
-      font-size: 11.5px;
-      font-weight: 500;
-      color: rgba(255, 255, 255, 0.85);
-      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.65);
-      cursor: pointer;
-      z-index: 1000;
-      align-items: center;
-      gap: 5px;
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-      transition: opacity 0.22s ease, transform 0.22s ease, background 0.18s ease;
-      user-select: none;
-    }
-    .bottom-binge-trigger:hover {
-      background: rgba(38, 38, 38, 0.95);
-      color: #ffffff;
-      border-color: rgba(255, 255, 255, 0.35);
-      transform: translateX(-50%) translateY(-2px);
-    }
-    .bottom-binge-trigger .bbt-icon {
-      font-size: 11px;
-      line-height: 1;
-    }
-    body.mode-max .bottom-binge-trigger {
-      display: inline-flex;
-    }
-    body.mode-max .binge-control-bar.is-hidden ~ .bottom-binge-trigger {
-      opacity: 0.85;
-      visibility: visible;
-      pointer-events: auto;
-    }
-    body.mode-max .bottom-binge-trigger:hover {
-      opacity: 1;
-    }
-
     /* Fullscreen Support for Floating Binge Bar */
     .video-container:fullscreen .video-wrapper,
     .video-container:-webkit-full-screen .video-wrapper {
@@ -513,16 +464,6 @@
       visibility: hidden;
       pointer-events: none;
       transform: translateX(-50%) translateY(16px);
-    }
-    .video-container:fullscreen .bottom-binge-trigger,
-    .video-container:-webkit-full-screen .bottom-binge-trigger {
-      display: inline-flex;
-    }
-    .video-container:fullscreen .binge-control-bar.is-hidden ~ .bottom-binge-trigger,
-    .video-container:-webkit-full-screen .binge-control-bar.is-hidden ~ .bottom-binge-trigger {
-      opacity: 0.85;
-      visibility: visible;
-      pointer-events: auto;
     }
 
     /* Right Sidebar in mode-max (slides in from right smoothly) */
@@ -1988,9 +1929,6 @@
         font-size: 12px !important;
         border-radius: 16px !important;
       }
-      .bottom-binge-trigger {
-        display: none !important;
-      }
       .yt-switch-wrap {
         gap: 5px !important;
         margin-left: 2px !important;
@@ -2389,12 +2327,6 @@
             <button id="toggle-watched-btn" class="ctrl-btn" title="시청 완료 체크">✓ 완료</button>
             <button id="clear-watched-btn" class="ctrl-btn subtle-btn" title="모든 시청 완료(✓) 기록 초기화">기록 초기화</button>
           </div>
-        </div>
-
-        <!-- Floating trigger pill in maximize mode when binge bar is auto-hidden -->
-        <div class="bottom-binge-trigger" id="bottom-binge-trigger" title="연속 재생 제어 바 열기">
-          <span class="bbt-icon">⌃</span>
-          <span class="bbt-text">재생 제어</span>
         </div>
       </div>
     </main>
@@ -3713,7 +3645,6 @@
     const modeMax = document.getElementById("mode-max");
     const rightTrigger = document.getElementById("right-edge-trigger");
     const bingeControlBar = document.getElementById("binge-control-bar");
-    const bottomBingeTrigger = document.getElementById("bottom-binge-trigger");
 
     let currentScreenMode = "large";
     let rightMenuTimer = null;
@@ -3751,15 +3682,6 @@
         if (document.body.classList.contains("mode-max")) {
           showBingeBar(2500);
         }
-      });
-    }
-
-    if (bottomBingeTrigger) {
-      bottomBingeTrigger.addEventListener("mouseenter", () => {
-        showBingeBar(3500);
-      });
-      bottomBingeTrigger.addEventListener("click", () => {
-        showBingeBar(4000);
       });
     }
 
