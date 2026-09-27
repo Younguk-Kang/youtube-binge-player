@@ -531,24 +531,45 @@
       pointer-events: auto !important; /* Direct mouse/touch interaction with YouTube native controls */
     }
 
-    /* Video Click & Cursor Auto-Hide Layer - Pure native YouTube interaction */
+    /* Video Click & Cursor Auto-Hide Layer */
     .video-click-layer {
-      display: none !important;
-      pointer-events: none !important;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 5;
+      cursor: default;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      /* Unblock top-right menus (Watch Later, Share ~240px x 68px), bottom playback scrubber bar (90px), and settings popup (320px x 350px) */
+      clip-path: polygon(
+        0 0,
+        calc(100% - min(240px, 45%)) 0,
+        calc(100% - min(240px, 45%)) 68px,
+        100% 68px,
+        100% calc(100% - min(350px, 65%)),
+        calc(100% - min(320px, 45%)) calc(100% - min(350px, 65%)),
+        calc(100% - min(320px, 45%)) calc(100% - 90px),
+        0 calc(100% - 90px)
+      );
     }
 
-    /* Idle / Inactivity: Automatically hide cursor when idle */
+    /* Idle / Inactivity: Expand to 100% and completely hide cursor across entire video */
     .video-wrapper.cursor-idle,
     .video-wrapper.cursor-idle * {
       cursor: none !important;
     }
 
     .video-wrapper.cursor-idle .video-click-layer {
-      display: none !important;
-      pointer-events: none !important;
+      clip-path: none !important;
+      cursor: none !important;
+      pointer-events: auto !important;
     }
 
-    /* Center play/pause feedback badge (disabled to keep pure native YouTube indicators) */
+    /* Center play/pause feedback badge (permanently disabled to avoid double indicators) */
     .center-play-badge {
       display: none !important;
     }
@@ -3695,6 +3716,25 @@
       } catch (e) {
         try { if (player && player.playVideo) player.playVideo(); } catch(err) {}
       }
+    }
+
+    if (clickLayer) {
+      clickLayer.addEventListener("mousemove", () => {
+        wakeUpCursor();
+        if (isVideoPlaying()) scheduleCursorIdle(2500);
+      });
+      clickLayer.addEventListener("mouseleave", () => {
+        clearTimeout(cursorIdleTimer);
+        wakeUpCursor();
+      });
+      clickLayer.addEventListener("click", () => {
+        wakeUpCursor();
+        togglePlayPause();
+      });
+      clickLayer.addEventListener("dblclick", (e) => {
+        e.preventDefault();
+        toggleFullscreen();
+      });
     }
 
     if (videoWrapper) {
