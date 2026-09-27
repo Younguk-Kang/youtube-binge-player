@@ -531,48 +531,7 @@
       pointer-events: auto !important; /* Direct mouse/touch interaction with YouTube native controls */
     }
 
-    /* Video Click & Cursor Auto-Hide Layer */
-    .video-click-layer {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 5;
-      cursor: default;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: auto;
-      /* Unblock top-right menus (Watch Later, Share ~240px x 68px), bottom playback scrubber bar (90px), and settings popup (320px x 350px) */
-      clip-path: polygon(
-        0 0,
-        calc(100% - min(240px, 45%)) 0,
-        calc(100% - min(240px, 45%)) 68px,
-        100% 68px,
-        100% calc(100% - min(350px, 65%)),
-        calc(100% - min(320px, 45%)) calc(100% - min(350px, 65%)),
-        calc(100% - min(320px, 45%)) calc(100% - 90px),
-        0 calc(100% - 90px)
-      );
-    }
 
-    /* Idle / Inactivity: Expand to 100% and completely hide cursor across entire video */
-    .video-wrapper.cursor-idle,
-    .video-wrapper.cursor-idle * {
-      cursor: none !important;
-    }
-
-    .video-wrapper.cursor-idle .video-click-layer {
-      clip-path: none !important;
-      cursor: none !important;
-      pointer-events: auto !important;
-    }
-
-    /* Center play/pause feedback badge (permanently disabled to avoid double indicators) */
-    .center-play-badge {
-      display: none !important;
-    }
 
     .video-title-text {
       font-size: 13.5px;
@@ -1609,8 +1568,7 @@
         display: none !important;
       }
       body.mode-max .right-edge-trigger,
-      .right-edge-trigger,
-      .video-click-layer {
+      .right-edge-trigger {
         display: none !important;
       }
       body.mode-max .player-section,
@@ -2036,10 +1994,7 @@
           <div class="toast-msg" id="toast-msg"></div>
           <div id="yt-iframe"></div>
 
-          <!-- Video Click & Cursor Auto-Hide Layer -->
-          <div class="video-click-layer" id="video-click-layer">
-            <div class="center-play-badge" id="center-play-badge"></div>
-          </div>
+
 
           <!-- Error notice banner -->
           <div class="player-error-overlay" id="player-error-overlay">
@@ -3646,10 +3601,6 @@
     });
 
     const videoWrapper = document.getElementById("video-wrapper");
-    const clickLayer = document.getElementById("video-click-layer");
-    const playBadge = document.getElementById("center-play-badge");
-
-    let cursorIdleTimer = null;
 
     function isVideoPlaying() {
       if (isPlayerReady && player && typeof player.getPlayerState === "function") {
@@ -3661,41 +3612,10 @@
       return false;
     }
 
-    function showCenterBadge(icon) {
-      // Disabled to keep center pure native YouTube play/pause indicator without duplicate overlays
-    }
-
-    function wakeUpCursor() {
-      clearTimeout(cursorIdleTimer);
-      if (videoWrapper && videoWrapper.classList.contains("cursor-idle")) {
-        videoWrapper.classList.remove("cursor-idle");
-      }
-    }
-
-    function scheduleCursorIdle(delay = 2500) {
-      clearTimeout(cursorIdleTimer);
-      if (!isVideoPlaying()) {
-        wakeUpCursor();
-        return;
-      }
-      cursorIdleTimer = setTimeout(() => {
-        if (!isVideoPlaying()) {
-          wakeUpCursor();
-          return;
-        }
-        // Don't auto-hide if sidebar is hovered/open, or binge bar / modal is active
-        if (sidebar && (sidebar.matches(":hover") || sidebar.classList.contains("revealed"))) return;
-        if (bingeControlBar && bingeControlBar.matches(":hover")) return;
-        const modal = document.getElementById("channel-modal");
-        if (modal && modal.style.display === "flex") return;
-
-        if (videoWrapper) videoWrapper.classList.add("cursor-idle");
-      }, delay);
-    }
+    function wakeUpCursor() {}
+    function scheduleCursorIdle() {}
 
     function wakeOverlay() {
-      wakeUpCursor();
-      if (isVideoPlaying()) scheduleCursorIdle(2500);
       if (typeof showBingeBar === "function" && document.body.classList.contains("mode-max")) {
         showBingeBar(3000);
       }
@@ -3707,52 +3627,13 @@
         const state = (typeof player.getPlayerState === "function") ? player.getPlayerState() : -1;
         if (state === 1 || (typeof YT !== "undefined" && YT.PlayerState && state === YT.PlayerState.PLAYING)) {
           player.pauseVideo();
-          wakeUpCursor();
         } else {
           player.playVideo();
-          wakeUpCursor();
-          scheduleCursorIdle(2500);
         }
       } catch (e) {
         try { if (player && player.playVideo) player.playVideo(); } catch(err) {}
       }
     }
-
-    if (clickLayer) {
-      clickLayer.addEventListener("mousemove", () => {
-        wakeUpCursor();
-        if (isVideoPlaying()) scheduleCursorIdle(2500);
-      });
-      clickLayer.addEventListener("mouseleave", () => {
-        clearTimeout(cursorIdleTimer);
-        wakeUpCursor();
-      });
-      clickLayer.addEventListener("click", () => {
-        wakeUpCursor();
-        togglePlayPause();
-      });
-      clickLayer.addEventListener("dblclick", (e) => {
-        e.preventDefault();
-        toggleFullscreen();
-      });
-    }
-
-    if (videoWrapper) {
-      videoWrapper.addEventListener("mousemove", () => {
-        wakeUpCursor();
-        if (isVideoPlaying()) scheduleCursorIdle(2500);
-      });
-      videoWrapper.addEventListener("mouseleave", () => {
-        clearTimeout(cursorIdleTimer);
-        wakeUpCursor();
-      });
-    }
-
-    window.addEventListener("mousemove", (e) => {
-      if (videoWrapper && !videoWrapper.contains(e.target)) {
-        wakeUpCursor();
-      }
-    });
 
     // Fullscreen Toggle & Events (Native + Mobile CSS Full-Viewport Fallback for iOS/Android)
     let previousModeBeforeFs = "large";
