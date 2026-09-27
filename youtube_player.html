@@ -527,20 +527,7 @@
       display: none !important;
     }
 
-    /* Transparent Motion & Cursor Sensor Layer (hides cursor naturally when idle during playback) */
-    .video-cursor-sensor {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 10;
-      background: transparent;
-      pointer-events: none;
-      cursor: default;
-    }
-
-    /* When video is playing and mouse is idle: Naturally hide cursor across the ENTIRE viewport and screen */
+    /* Video Cursor Auto-Hide: naturally hide cursor across entire window when playing & idle */
     body.video-cursor-idle,
     body.video-cursor-idle *,
     .video-wrapper.video-cursor-idle,
@@ -548,20 +535,13 @@
       cursor: none !important;
     }
 
-    body.video-cursor-idle .video-cursor-sensor,
-    .video-wrapper.video-cursor-idle .video-cursor-sensor {
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      bottom: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      height: 100dvh !important;
-      z-index: 9999999 !important;
-      pointer-events: auto !important;
-      cursor: none !important;
-      display: block !important;
+    body.video-cursor-idle iframe,
+    body.video-cursor-idle #yt-iframe {
+      pointer-events: none !important;
+    }
+
+    .video-cursor-sensor {
+      display: none !important;
     }
 
     /* Video Click Layer (Single click play/pause, Double click fullscreen) */
@@ -3778,7 +3758,7 @@
 
     // Global mousemove for edge detection in mode-max
     window.addEventListener("mousemove", (e) => {
-      if (window.innerWidth <= 768 || !document.body.classList.contains("mode-max")) return;
+      if (window.innerWidth <= 768 || !document.body.classList.contains("mode-max") || document.body.classList.contains("video-cursor-idle")) return;
 
       const winW = window.innerWidth;
       const winH = window.innerHeight;
@@ -4032,10 +4012,9 @@
     }
 
     // Auto-hide Cursor when Playing & Idle over the screen
-    const cursorSensor = document.getElementById("video-cursor-sensor");
     let isVideoPlayingState = false;
     let cursorIdleTimer = null;
-    let needsPositionSync = false;
+    let idleActivatedAt = 0;
     let lastPointerX = -1;
     let lastPointerY = -1;
 
@@ -4053,7 +4032,6 @@
 
     function wakeUpCursor() {
       clearTimeout(cursorIdleTimer);
-      needsPositionSync = false;
 
       if (document.body.classList.contains("video-cursor-idle")) {
         document.body.classList.remove("video-cursor-idle");
@@ -4086,7 +4064,7 @@
         const modal = document.getElementById("channel-modal");
         if (modal && modal.style.display === "flex") return;
 
-        needsPositionSync = true;
+        idleActivatedAt = Date.now();
         document.body.classList.add("video-cursor-idle");
         if (videoWrapper) {
           videoWrapper.classList.add("video-cursor-idle");
@@ -4108,26 +4086,29 @@
     function handlePointerMove(e) {
       if (!e) return;
 
-      const curX = e.clientX;
-      const curY = e.clientY;
+      const curX = (typeof e.clientX === "number") ? e.clientX : lastPointerX;
+      const curY = (typeof e.clientY === "number") ? e.clientY : lastPointerY;
 
       if (document.body.classList.contains("video-cursor-idle")) {
-        // 1. First event upon entering idle synchronizes coordinates without waking up
-        if (needsPositionSync) {
-          needsPositionSync = false;
+        const elapsed = Date.now() - idleActivatedAt;
+
+        // 1. Synthetic hit-test events fired within 180ms of entering idle are ignored
+        if (elapsed < 180) {
           lastPointerX = curX;
           lastPointerY = curY;
           return;
         }
 
-        // 2. Only wake up if the mouse has physically moved by at least 2 pixels
-        const dx = Math.abs(curX - lastPointerX);
-        const dy = Math.abs(curY - lastPointerY);
-        if (dx < 2 && dy < 2) {
-          return;
+        // 2. Filter out micro-jitter / subpixel movements (< 4px)
+        if (lastPointerX >= 0 && lastPointerY >= 0) {
+          const dx = Math.abs(curX - lastPointerX);
+          const dy = Math.abs(curY - lastPointerY);
+          if (dx < 4 && dy < 4) {
+            return;
+          }
         }
       } else {
-        // When awake, avoid redundant wakeups if coordinates are identical
+        // When already awake, avoid redundant wakeups if coordinates haven't changed
         if (curX === lastPointerX && curY === lastPointerY) {
           return;
         }
@@ -4146,30 +4127,38 @@
       }
     }
 
-    // Global pointermove / mousemove & keydown detection across the entire window
-    window.addEventListener("pointermove", handlePointerMove, { passive: true });
+    // Single unified mousemove listener across the window (prevents double-dispatch)
     window.addEventListener("mousemove", handlePointerMove, { passive: true });
 
+    window.addEventListener("mousedown", (e) => {
+      lastPointerX = e.clientX;
+      lastPointerY = e.clientY;
+      wakeUpCursor();
+      if (isVideoPlaying()) {
+        scheduleCursorIdle(2000);
+      }
+    }, { passive: true });
+
+    window.addEventListener("touchstart", () => {
+      wakeUpCursor();
+      if (isVideoPlaying()) {
+        scheduleCursorIdle(2000);
+      }
+    }, { passive: true });
+
     window.addEventListener("keydown", () => {
-      needsPositionSync = false;
       wakeUpCursor();
       if (isVideoPlaying()) {
         scheduleCursorIdle(2000);
       }
     });
 
-    if (cursorSensor) {
-      cursorSensor.addEventListener("click", (e) => {
-        e.stopPropagation();
-        needsPositionSync = false;
-        wakeUpCursor();
+    if (videoWrapper) {
+      videoWrapper.addEventListener("click", () => {
+        // Direct click on video wrapper area toggles play/pause
         togglePlayPause();
       });
-
-      cursorSensor.addEventListener("dblclick", (e) => {
-        e.stopPropagation();
-        needsPositionSync = false;
-        wakeUpCursor();
+      videoWrapper.addEventListener("dblclick", () => {
         toggleFullscreen();
       });
     }
