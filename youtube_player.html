@@ -558,14 +558,14 @@
     }
 
     /* Always keep cursor visible on sidebar playlist, header, binge bar, and dialogs */
-    .list-section,
-    .list-section *,
-    .header-bar,
-    .header-bar *,
-    .binge-control-bar,
-    .binge-control-bar *,
-    .modal-box,
-    .modal-box * {
+    body.video-cursor-idle .list-section,
+    body.video-cursor-idle .list-section *,
+    body.video-cursor-idle .header-bar,
+    body.video-cursor-idle .header-bar *,
+    body.video-cursor-idle .binge-control-bar,
+    body.video-cursor-idle .binge-control-bar *,
+    body.video-cursor-idle .modal-box,
+    body.video-cursor-idle .modal-box * {
       cursor: default !important;
     }
 
@@ -2588,6 +2588,7 @@
     }
 
     const sidebar = document.getElementById("sidebar");
+    let isSidebarHovered = false;
     const mainBox = document.getElementById("main-box");
     const resizer = document.getElementById("resizer");
     const currentTitleEl = document.getElementById("current-title");
@@ -4041,7 +4042,8 @@
     const cursorSensor = document.getElementById("video-cursor-sensor");
     let isVideoPlayingState = false;
     let cursorIdleTimer = null;
-    let idleActivatedAt = 0;
+    let transitionTimer = null;
+    let isTransitioningToIdle = false;
     let lastPointerX = -1;
     let lastPointerY = -1;
 
@@ -4057,7 +4059,9 @@
 
     function wakeUpCursor() {
       clearTimeout(cursorIdleTimer);
-      idleActivatedAt = 0;
+      clearTimeout(transitionTimer);
+      isTransitioningToIdle = false;
+
       if (document.body.classList.contains("video-cursor-idle")) {
         document.body.classList.remove("video-cursor-idle");
       }
@@ -4086,13 +4090,16 @@
           wakeUpCursor();
           return;
         }
-        // Don't hide cursor if sidebar is hovered or modal is open
-        if (sidebar && sidebar.matches(":hover")) return;
+        // Don't hide cursor if sidebar is hovered or modal is open or binge bar is hovered
+        if (isSidebarHovered) return;
+        if (isBingeBarHovered) return;
         const modal = document.getElementById("channel-modal");
         if (modal && modal.style.display === "flex") return;
-        if (bingeControlBar && bingeControlBar.matches(":hover")) return;
 
-        idleActivatedAt = Date.now();
+        // Start transition: activate idle and ignore synthetic browser hit-test events for 250ms
+        clearTimeout(transitionTimer);
+        isTransitioningToIdle = true;
+
         document.body.classList.add("video-cursor-idle");
         if (videoWrapper) {
           videoWrapper.classList.add("video-cursor-idle");
@@ -4101,6 +4108,10 @@
         if (typeof hideBingeBar === "function") {
           hideBingeBar();
         }
+
+        transitionTimer = setTimeout(() => {
+          isTransitioningToIdle = false;
+        }, 250);
       }, delay);
     }
 
@@ -4116,37 +4127,37 @@
 
       const curX = e.clientX;
       const curY = e.clientY;
-      const movementX = (typeof e.movementX === "number") ? e.movementX : 0;
-      const movementY = (typeof e.movementY === "number") ? e.movementY : 0;
 
-      const isIdle = document.body.classList.contains("video-cursor-idle");
-      if (isIdle) {
-        const timeSinceIdle = Date.now() - idleActivatedAt;
+      // 1. If currently in transition window, record the cursor resting location and DO NOT wake up!
+      if (isTransitioningToIdle) {
+        lastPointerX = curX;
+        lastPointerY = curY;
+        return;
+      }
 
-        // Check if this is a synthetic browser event fired upon pointer-events transition
-        const isSynthetic = (movementX === 0 && movementY === 0) || (timeSinceIdle < 120 && Math.abs(curX - lastPointerX) < 3 && Math.abs(curY - lastPointerY) < 3);
-
-        if (isSynthetic) {
-          // Synchronize coordinates to the true position and ignore synthetic event!
+      // 2. If idle (cursor is hidden):
+      if (document.body.classList.contains("video-cursor-idle")) {
+        // If coordinate is uninitialized, record and stay idle
+        if (lastPointerX < 0 || lastPointerY < 0) {
           lastPointerX = curX;
           lastPointerY = curY;
           return;
         }
 
-        // Real movement detected while idle!
+        // Only wake up if the mouse has physically moved by at least 4 pixels
         const dx = Math.abs(curX - lastPointerX);
         const dy = Math.abs(curY - lastPointerY);
-        if (dx < 2 && dy < 2 && movementX === 0 && movementY === 0) {
+        if (dx < 4 && dy < 4) {
           return;
         }
       } else {
-        // When already awake, avoid redundant wakeups if coordinates haven't changed
-        if (curX === lastPointerX && curY === lastPointerY && movementX === 0 && movementY === 0) {
+        // When already awake, avoid redundant wakeups if coordinates are identical
+        if (curX === lastPointerX && curY === lastPointerY) {
           return;
         }
       }
 
-      // Real movement: Update last coordinates
+      // Real intentional movement: Update last coordinates
       lastPointerX = curX;
       lastPointerY = curY;
 
@@ -4171,9 +4182,6 @@
     });
 
     if (cursorSensor) {
-      cursorSensor.addEventListener("pointermove", handlePointerMove, { passive: true });
-      cursorSensor.addEventListener("mousemove", handlePointerMove, { passive: true });
-
       cursorSensor.addEventListener("click", (e) => {
         e.stopPropagation();
         wakeUpCursor();
@@ -4200,14 +4208,17 @@
 
     if (sidebar) {
       sidebar.addEventListener("mouseenter", () => {
+        isSidebarHovered = true;
         wakeUpCursor();
         clearTimeout(cursorIdleTimer);
       });
       sidebar.addEventListener("mousemove", () => {
+        isSidebarHovered = true;
         wakeUpCursor();
         clearTimeout(cursorIdleTimer);
       });
       sidebar.addEventListener("mouseleave", () => {
+        isSidebarHovered = false;
         if (isVideoPlaying()) {
           scheduleCursorIdle(2500);
         }
@@ -4216,10 +4227,12 @@
 
     if (bingeControlBar) {
       bingeControlBar.addEventListener("mouseenter", () => {
+        isBingeBarHovered = true;
         wakeUpCursor();
         clearTimeout(cursorIdleTimer);
       });
       bingeControlBar.addEventListener("mouseleave", () => {
+        isBingeBarHovered = false;
         if (isVideoPlaying()) {
           scheduleCursorIdle(2500);
         }
