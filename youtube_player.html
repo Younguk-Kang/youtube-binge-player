@@ -527,6 +527,19 @@
       display: none !important;
     }
 
+    /* Auto-hide Cursor when Playing & Idle across screen */
+    body.video-cursor-idle,
+    body.video-cursor-idle *,
+    .video-wrapper.video-cursor-idle,
+    .video-wrapper.video-cursor-idle * {
+      cursor: none !important;
+    }
+
+    body.video-cursor-idle iframe,
+    body.video-cursor-idle #yt-iframe {
+      pointer-events: none !important;
+    }
+
 
     /* Video Click Layer (Single click play/pause, Double click fullscreen) */
     .video-click-layer {
@@ -3377,20 +3390,26 @@
             'onStateChange': function(event) {
               const state = event.data;
               if (state === 1 || (typeof YT !== "undefined" && YT.PlayerState && state === YT.PlayerState.PLAYING)) {
+                isVideoPlayingState = true;
                 if (typeof updatePlayPauseUI === "function") updatePlayPauseUI(true);
                 applyPreferredQuality();
                 updateQualityOptions();
                 applySubtitlesState();
                 setTimeout(applySubtitlesState, 500);
                 if (typeof showBingeBar === "function") showBingeBar(3000);
+                if (typeof scheduleCursorIdle === "function") scheduleCursorIdle(2000);
               }
 
               if (state === 2 || (typeof YT !== "undefined" && YT.PlayerState && state === YT.PlayerState.PAUSED)) {
+                isVideoPlayingState = false;
+                if (typeof wakeUpCursor === "function") wakeUpCursor();
                 if (typeof updatePlayPauseUI === "function") updatePlayPauseUI(false);
                 saveCurrentPlayingPosition();
                 if (typeof showBingeBar === "function") showBingeBar(0);
               }
               if (state === 0 || (typeof YT !== "undefined" && YT.PlayerState && state === YT.PlayerState.ENDED)) {
+                isVideoPlayingState = false;
+                if (typeof wakeUpCursor === "function") wakeUpCursor();
                 if (typeof updatePlayPauseUI === "function") updatePlayPauseUI(false);
                 if (typeof showBingeBar === "function") showBingeBar(4000);
                 let curVid = (currentIndex >= 0 && currentIndex < displayList.length) ? displayList[currentIndex] : null;
@@ -3734,7 +3753,7 @@
 
     // Global mousemove for edge detection in mode-max
     window.addEventListener("mousemove", (e) => {
-      if (window.innerWidth <= 768 || !document.body.classList.contains("mode-max")) return;
+      if (window.innerWidth <= 768 || !document.body.classList.contains("mode-max") || document.body.classList.contains("video-cursor-idle")) return;
 
       const winW = window.innerWidth;
       const winH = window.innerHeight;
@@ -3987,9 +4006,78 @@
       });
     }
 
-    function wakeOverlay() {
+    // Auto-hide Cursor when Playing & Idle over the screen
+    let isVideoPlayingState = false;
+    let cursorIdleTimer = null;
+    let idleActivatedAt = 0;
+    let restingX = -1;
+    let restingY = -1;
+
+    function isVideoPlaying() {
+      if (isPlayerReady && player && typeof player.getPlayerState === "function") {
+        try {
+          const s = player.getPlayerState();
+          if (s === 1 || s === 3) return true;
+          if (typeof YT !== "undefined" && YT.PlayerState && (s === YT.PlayerState.PLAYING || s === YT.PlayerState.BUFFERING)) return true;
+          if (s === 0 || s === 2 || s === -1) return false;
+        } catch(e) {}
+      }
+      return !!isVideoPlayingState;
+    }
+
+    function wakeUpCursor() {
+      clearTimeout(cursorIdleTimer);
+      cursorIdleTimer = null;
+
+      if (document.body.classList.contains("video-cursor-idle")) {
+        document.body.classList.remove("video-cursor-idle");
+      }
+      if (videoWrapper) {
+        if (videoWrapper.classList.contains("video-cursor-idle")) {
+          videoWrapper.classList.remove("video-cursor-idle");
+        }
+        if (videoWrapper.classList.contains("idle")) {
+          videoWrapper.classList.remove("idle");
+        }
+      }
       if (typeof showBingeBar === "function" && document.body.classList.contains("mode-max")) {
         showBingeBar(3000);
+      }
+    }
+
+    function scheduleCursorIdle(delay = 2000) {
+      clearTimeout(cursorIdleTimer);
+      if (!isVideoPlaying()) {
+        wakeUpCursor();
+        return;
+      }
+
+      cursorIdleTimer = setTimeout(() => {
+        if (!isVideoPlaying()) {
+          wakeUpCursor();
+          return;
+        }
+        const modal = document.getElementById("channel-modal");
+        if (modal && modal.style.display === "flex") return;
+
+        idleActivatedAt = Date.now();
+        restingX = -1;
+        restingY = -1;
+        document.body.classList.add("video-cursor-idle");
+        if (videoWrapper) {
+          videoWrapper.classList.add("video-cursor-idle");
+          videoWrapper.classList.add("idle");
+        }
+        if (typeof hideBingeBar === "function") {
+          hideBingeBar();
+        }
+      }, delay);
+    }
+
+    function wakeOverlay() {
+      wakeUpCursor();
+      if (isVideoPlaying()) {
+        scheduleCursorIdle(2000);
       }
     }
 
@@ -3999,11 +4087,86 @@
       }
     }
 
+    function handleMouseMove(e) {
+      if (!e) return;
+
+      const curX = e.clientX;
+      const curY = e.clientY;
+
+      if (document.body.classList.contains("video-cursor-idle")) {
+        const elapsed = Date.now() - idleActivatedAt;
+
+        // 1. First 300ms of entering idle:
+        // Absorb browser's synthetic pointer-events hit-test events.
+        // Record true resting position and NEVER wake up.
+        if (elapsed < 300) {
+          restingX = curX;
+          restingY = curY;
+          return;
+        }
+
+        // 2. If resting coordinates are not yet set, record and stay idle
+        if (restingX < 0 || restingY < 0) {
+          restingX = curX;
+          restingY = curY;
+          return;
+        }
+
+        // 3. Filter micro-jitter / subpixel shifts (< 6px)
+        const dx = Math.abs(curX - restingX);
+        const dy = Math.abs(curY - restingY);
+        if (dx < 6 && dy < 6) {
+          return;
+        }
+      }
+
+      // Real user movement:
+      wakeUpCursor();
+
+      // If playing, schedule auto-hide after 2.0s of inactivity
+      if (isVideoPlaying()) {
+        scheduleCursorIdle(2000);
+      }
+    }
+
+    // Unified mouse/touch/key listeners
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
+
+    window.addEventListener("mousedown", (e) => {
+      wakeUpCursor();
+      if (isVideoPlaying()) {
+        scheduleCursorIdle(2000);
+      }
+    }, { passive: true });
+
+    window.addEventListener("touchstart", () => {
+      wakeUpCursor();
+      if (isVideoPlaying()) {
+        scheduleCursorIdle(2000);
+      }
+    }, { passive: true });
+
+    window.addEventListener("keydown", () => {
+      wakeUpCursor();
+      if (isVideoPlaying()) {
+        scheduleCursorIdle(2000);
+      }
+    });
+
     if (videoWrapper) {
       videoWrapper.addEventListener("dblclick", () => {
         toggleFullscreen();
       });
     }
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        clearTimeout(cursorIdleTimer);
+        wakeUpCursor();
+      } else if (isVideoPlaying()) {
+        scheduleCursorIdle(2000);
+      }
+    });
 
     // Progress Bar Scrubber Update Loop & Periodic Position Saver
     let lastTimeStr = "";
@@ -4019,6 +4182,11 @@
         if (typeof player.getPlayerState === "function") {
           const state = player.getPlayerState();
           if (state !== 1 && state !== 3) return;
+        }
+
+        // Watchdog: Ensure cursor idle countdown is active while video is playing
+        if (isVideoPlaying() && !document.body.classList.contains("video-cursor-idle") && cursorIdleTimer === null) {
+          scheduleCursorIdle(2000);
         }
 
         if (typeof player.getCurrentTime === "function" && typeof player.getDuration === "function") {
