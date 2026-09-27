@@ -522,37 +522,43 @@
       pointer-events: auto !important; /* Direct mouse/touch interaction with YouTube native controls */
     }
 
-    .video-click-layer,
     .video-controls-overlay {
       display: none !important;
     }
 
-    /* Auto-hide Cursor when Playing & Idle across screen */
-    body.video-cursor-idle,
-    body.video-cursor-idle *,
-    .video-wrapper.video-cursor-idle,
-    .video-wrapper.video-cursor-idle * {
-      cursor: none !important;
-    }
-
-    body.video-cursor-idle iframe,
-    body.video-cursor-idle #yt-iframe {
-      pointer-events: none !important;
-    }
-
-
-    /* Video Click Layer (Single click play/pause, Double click fullscreen) */
+    /* Video Click Layer: Positioned over video picture to guarantee 100% cursor autohide & native clicks */
     .video-click-layer {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
-      height: 100%;
+      height: calc(100% - 54px);
       z-index: 5;
-      cursor: pointer;
+      cursor: default;
       display: flex;
       align-items: center;
       justify-content: center;
+      pointer-events: auto;
+    }
+
+    /* When user hovers or interacts with the bottom controls bar / quality menu */
+    .video-wrapper.using-controls .video-click-layer {
+      pointer-events: none !important;
+    }
+
+    /* Idle / Inactivity on video: Hide both controls AND cursor together! */
+    .video-wrapper.idle,
+    .video-wrapper.idle *,
+    body.video-cursor-idle,
+    body.video-cursor-idle * {
+      cursor: none !important;
+    }
+
+    .video-wrapper.idle .video-click-layer {
+      height: 100% !important;
+      bottom: 0 !important;
+      cursor: none !important;
+      pointer-events: auto !important;
     }
 
     .center-ripple {
@@ -3991,8 +3997,7 @@
 
       clickLayer.addEventListener("click", (e) => {
         e.stopPropagation();
-        wakeOverlay();
-        scheduleOverlayHide(2800);
+        wakeUpCursor();
         if (singleClickTimer) {
           clearTimeout(singleClickTimer);
           singleClickTimer = null;
@@ -4001,7 +4006,10 @@
           singleClickTimer = setTimeout(() => {
             singleClickTimer = null;
             togglePlayPause();
-          }, 220);
+            if (isVideoPlaying()) {
+              scheduleCursorIdle(2000);
+            }
+          }, 240);
         }
       });
     }
@@ -4010,8 +4018,7 @@
     let isVideoPlayingState = false;
     let cursorIdleTimer = null;
     let idleActivatedAt = 0;
-    let restingX = -1;
-    let restingY = -1;
+    let usingControlsTimeout = null;
 
     function isVideoPlaying() {
       if (isPlayerReady && player && typeof player.getPlayerState === "function") {
@@ -4061,13 +4068,12 @@
         if (modal && modal.style.display === "flex") return;
 
         idleActivatedAt = Date.now();
-        restingX = -1;
-        restingY = -1;
-        document.body.classList.add("video-cursor-idle");
         if (videoWrapper) {
-          videoWrapper.classList.add("video-cursor-idle");
+          videoWrapper.classList.remove("using-controls");
           videoWrapper.classList.add("idle");
+          videoWrapper.classList.add("video-cursor-idle");
         }
+        document.body.classList.add("video-cursor-idle");
         if (typeof hideBingeBar === "function") {
           hideBingeBar();
         }
@@ -4087,43 +4093,28 @@
       }
     }
 
+    function checkControlsZone(e) {
+      if (!videoWrapper || !e) return;
+      const rect = videoWrapper.getBoundingClientRect();
+      const fromBottom = rect.bottom - e.clientY;
+      if (fromBottom <= 60 && fromBottom >= 0) {
+        videoWrapper.classList.add("using-controls");
+        clearTimeout(usingControlsTimeout);
+        usingControlsTimeout = setTimeout(() => {
+          if (videoWrapper) videoWrapper.classList.remove("using-controls");
+        }, 4000);
+      } else if (fromBottom > 240) {
+        if (videoWrapper) videoWrapper.classList.remove("using-controls");
+      }
+    }
+
     function handleMouseMove(e) {
       if (!e) return;
 
-      const curX = e.clientX;
-      const curY = e.clientY;
+      checkControlsZone(e);
 
-      if (document.body.classList.contains("video-cursor-idle")) {
-        const elapsed = Date.now() - idleActivatedAt;
-
-        // 1. First 300ms of entering idle:
-        // Absorb browser's synthetic pointer-events hit-test events.
-        // Record true resting position and NEVER wake up.
-        if (elapsed < 300) {
-          restingX = curX;
-          restingY = curY;
-          return;
-        }
-
-        // 2. If resting coordinates are not yet set, record and stay idle
-        if (restingX < 0 || restingY < 0) {
-          restingX = curX;
-          restingY = curY;
-          return;
-        }
-
-        // 3. Filter micro-jitter / subpixel shifts (< 6px)
-        const dx = Math.abs(curX - restingX);
-        const dy = Math.abs(curY - restingY);
-        if (dx < 6 && dy < 6) {
-          return;
-        }
-      }
-
-      // Real user movement:
       wakeUpCursor();
 
-      // If playing, schedule auto-hide after 2.0s of inactivity
       if (isVideoPlaying()) {
         scheduleCursorIdle(2000);
       }
@@ -4154,6 +4145,14 @@
     });
 
     if (videoWrapper) {
+      videoWrapper.addEventListener("mousemove", handleMouseMove, { passive: true });
+
+      videoWrapper.addEventListener("mouseleave", () => {
+        if (!document.body.classList.contains("mode-max")) {
+          wakeUpCursor();
+        }
+      });
+
       videoWrapper.addEventListener("dblclick", () => {
         toggleFullscreen();
       });
