@@ -527,6 +527,41 @@
       display: none !important;
     }
 
+    /* Transparent Motion & Cursor Sensor Layer (hides cursor naturally when idle during playback) */
+    .video-cursor-sensor {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 6;
+      background: transparent;
+      pointer-events: none;
+      cursor: default;
+    }
+
+    /* When video is playing and mouse is idle: Naturally hide cursor over player, video, and screen */
+    body.video-cursor-idle,
+    body.video-cursor-idle .player-section,
+    body.video-cursor-idle .video-container,
+    body.video-cursor-idle .video-wrapper,
+    body.video-cursor-idle .video-wrapper * {
+      cursor: none !important;
+    }
+
+    body.video-cursor-idle .video-cursor-sensor {
+      pointer-events: auto !important;
+      cursor: none !important;
+    }
+
+    /* Always keep cursor visible on sidebar playlist, header, and dialogs */
+    body.video-cursor-idle .list-section,
+    body.video-cursor-idle .list-section *,
+    body.video-cursor-idle .modal-box,
+    body.video-cursor-idle .modal-box * {
+      cursor: default !important;
+    }
+
     /* Video Click Layer (Single click play/pause, Double click fullscreen) */
     .video-click-layer {
       position: absolute;
@@ -1929,6 +1964,9 @@
         font-size: 12px !important;
         border-radius: 16px !important;
       }
+      .video-cursor-sensor {
+        display: none !important;
+      }
       .yt-switch-wrap {
         gap: 5px !important;
         margin-left: 2px !important;
@@ -2293,6 +2331,8 @@
           <!-- Toast Message (Placed inside video-wrapper so it displays in fullscreen) -->
           <div class="toast-msg" id="toast-msg"></div>
           <div id="yt-iframe"></div>
+          <!-- Transparent motion & cursor sensor layer (hides cursor naturally when playing & idle) -->
+          <div class="video-cursor-sensor" id="video-cursor-sensor"></div>
 
           <!-- Error notice banner -->
           <div class="player-error-overlay" id="player-error-overlay">
@@ -3374,20 +3414,26 @@
             },
             'onStateChange': function(event) {
               if (event.data === YT.PlayerState.PLAYING) {
+                isVideoPlayingState = true;
                 if (typeof updatePlayPauseUI === "function") updatePlayPauseUI(true);
                 applyPreferredQuality();
                 updateQualityOptions();
                 applySubtitlesState();
                 setTimeout(applySubtitlesState, 500);
                 if (typeof showBingeBar === "function") showBingeBar(3000);
+                if (typeof scheduleCursorIdle === "function") scheduleCursorIdle(2500);
               }
 
               if (event.data === YT.PlayerState.PAUSED) {
+                isVideoPlayingState = false;
+                if (typeof wakeUpCursor === "function") wakeUpCursor();
                 if (typeof updatePlayPauseUI === "function") updatePlayPauseUI(false);
                 saveCurrentPlayingPosition();
                 if (typeof showBingeBar === "function") showBingeBar(0);
               }
               if (event.data === YT.PlayerState.ENDED) {
+                isVideoPlayingState = false;
+                if (typeof wakeUpCursor === "function") wakeUpCursor();
                 if (typeof updatePlayPauseUI === "function") updatePlayPauseUI(false);
                 if (typeof showBingeBar === "function") showBingeBar(4000);
                 let curVid = (currentIndex >= 0 && currentIndex < displayList.length) ? displayList[currentIndex] : null;
@@ -3984,52 +4030,121 @@
       });
     }
 
-    // Auto-hide controls & cursor: Appears on hover/mousemove, HIDES BOTH TOGETHER WHEN IDLE, HIDES IMMEDIATELY ON MOUSELEAVE (0s delay!)
-    function wakeOverlay() {
-      clearTimeout(mouseIdleTimer);
-      if (videoWrapper) videoWrapper.classList.remove("idle");
+    // Auto-hide Cursor when Playing & Idle over the screen
+    const cursorSensor = document.getElementById("video-cursor-sensor");
+    let isVideoPlayingState = false;
+    let cursorIdleTimer = null;
+
+    function isVideoPlaying() {
+      if (isPlayerReady && player && typeof player.getPlayerState === "function") {
+        try {
+          const s = player.getPlayerState();
+          return (s === YT.PlayerState.PLAYING);
+        } catch(e) {}
+      }
+      return isVideoPlayingState;
     }
 
-    function scheduleOverlayHide(delay = 2200) {
-      clearTimeout(mouseIdleTimer);
-      mouseIdleTimer = setTimeout(() => {
-        if (isScrubbing || (controlsOverlay && controlsOverlay.matches(":hover")) || (videoWrapper && videoWrapper.classList.contains("controls-open"))) return;
+    function wakeUpCursor() {
+      clearTimeout(cursorIdleTimer);
+      if (document.body.classList.contains("video-cursor-idle")) {
+        document.body.classList.remove("video-cursor-idle");
+      }
+      if (videoWrapper && videoWrapper.classList.contains("idle")) {
+        videoWrapper.classList.remove("idle");
+      }
+    }
+
+    function scheduleCursorIdle(delay = 2500) {
+      clearTimeout(cursorIdleTimer);
+      if (!isVideoPlaying()) {
+        wakeUpCursor();
+        return;
+      }
+
+      cursorIdleTimer = setTimeout(() => {
+        if (!isVideoPlaying()) {
+          wakeUpCursor();
+          return;
+        }
+        // Don't hide cursor if sidebar is hovered or modal is open
+        if (sidebar && sidebar.matches(":hover")) return;
+        const modal = document.getElementById("channel-modal");
+        if (modal && modal.style.display === "flex") return;
+        if (bingeControlBar && bingeControlBar.matches(":hover")) return;
+
+        document.body.classList.add("video-cursor-idle");
         if (videoWrapper) videoWrapper.classList.add("idle");
       }, delay);
+    }
+
+    function wakeOverlay() {
+      wakeUpCursor();
+      if (isVideoPlaying()) {
+        scheduleCursorIdle(2500);
+      }
     }
 
     let lastMouseMoveTime = 0;
     function handleMouseMove() {
       const now = Date.now();
-      if (now - lastMouseMoveTime > 80) {
+      if (now - lastMouseMoveTime > 50) {
         lastMouseMoveTime = now;
-        wakeOverlay();
-        scheduleOverlayHide(2200);
+        wakeUpCursor();
+        if (isVideoPlaying()) {
+          scheduleCursorIdle(2500);
+        }
       }
+    }
+
+    // Global mousemove & keydown detection across the window
+    window.addEventListener("mousemove", (e) => {
+      wakeUpCursor();
+      if (isVideoPlaying()) {
+        scheduleCursorIdle(2500);
+      }
+    });
+
+    window.addEventListener("keydown", () => {
+      wakeUpCursor();
+      if (isVideoPlaying()) {
+        scheduleCursorIdle(2500);
+      }
+    });
+
+    if (cursorSensor) {
+      cursorSensor.addEventListener("mousemove", () => {
+        wakeUpCursor();
+        if (isVideoPlaying()) {
+          scheduleCursorIdle(2500);
+        }
+      });
+
+      cursorSensor.addEventListener("click", (e) => {
+        e.stopPropagation();
+        wakeUpCursor();
+        togglePlayPause();
+      });
+
+      cursorSensor.addEventListener("dblclick", (e) => {
+        e.stopPropagation();
+        wakeUpCursor();
+        toggleFullscreen();
+      });
     }
 
     if (videoWrapper) {
       videoWrapper.addEventListener("mouseenter", () => {
-        wakeOverlay();
-        scheduleOverlayHide(2200);
+        wakeUpCursor();
+        if (isVideoPlaying()) scheduleCursorIdle(2500);
       });
 
       videoWrapper.addEventListener("mousemove", handleMouseMove);
 
-      // KEY FEATURE: 0-second instant hide when mouse leaves the video!
       videoWrapper.addEventListener("mouseleave", () => {
-        clearTimeout(mouseIdleTimer);
-        if (videoWrapper) videoWrapper.classList.add("idle");
-        if (progressTooltip) progressTooltip.style.display = "none";
+        clearTimeout(cursorIdleTimer);
+        wakeUpCursor();
       });
-    }
-
-    if (controlsOverlay) {
-      controlsOverlay.addEventListener("mouseenter", () => {
-        wakeOverlay();
-        scheduleOverlayHide(2200);
-      });
-      controlsOverlay.addEventListener("mousemove", handleMouseMove);
     }
 
     // Progress Bar Scrubber Update Loop & Periodic Position Saver
