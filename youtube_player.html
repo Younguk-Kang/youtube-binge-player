@@ -2516,6 +2516,33 @@
       }
     });
 
+    function getSavedSearchQuery(channelId) {
+      if (channelId) {
+        const chQuery = localStorage.getItem("binge_search_" + channelId);
+        if (chQuery !== null && chQuery !== undefined) return chQuery;
+      }
+      return localStorage.getItem("binge_last_search_query") || "";
+    }
+
+    function saveSearchQuery(query, channelId) {
+      const q = (query || "").trim();
+      if (q) {
+        try {
+          localStorage.setItem("binge_last_search_query", q);
+          if (channelId) {
+            localStorage.setItem("binge_search_" + channelId, q);
+          }
+        } catch(e) {}
+      } else {
+        try {
+          localStorage.removeItem("binge_last_search_query");
+          if (channelId) {
+            localStorage.removeItem("binge_search_" + channelId);
+          }
+        } catch(e) {}
+      }
+    }
+
     function switchChannel(channel) {
       if (!channel) {
         currentChannel = null;
@@ -2539,9 +2566,14 @@
       saveChannels();
 
       const searchBox = document.getElementById("search-box");
-      if (searchBox) searchBox.value = "";
       const searchClearBtn = document.getElementById("search-clear-btn");
-      if (searchClearBtn) searchClearBtn.style.display = "none";
+      const savedQuery = getSavedSearchQuery(chId);
+      if (searchBox) {
+        searchBox.value = savedQuery;
+        if (searchClearBtn) {
+          searchClearBtn.style.display = savedQuery ? "flex" : "none";
+        }
+      }
 
       prepareList(true);
 
@@ -3343,15 +3375,21 @@
       searchClearBtn.addEventListener("click", () => {
         searchBox.value = "";
         searchClearBtn.style.display = "none";
+        const chId = currentChannel ? getChannelId(currentChannel) : "";
+        saveSearchQuery("", chId);
         prepareList(true);
         showToast("전체 영상 목록을 표시합니다.", 1500);
       });
     }
 
     searchBox.addEventListener("input", () => {
+      const q = searchBox.value.trim();
       if (searchClearBtn) {
-        searchClearBtn.style.display = searchBox.value.trim().length > 0 ? "flex" : "none";
+        searchClearBtn.style.display = q.length > 0 ? "flex" : "none";
       }
+      const chId = currentChannel ? getChannelId(currentChannel) : "";
+      saveSearchQuery(q, chId);
+
       clearTimeout(searchDebounce);
       searchDebounce = setTimeout(() => {
         prepareList(false); // don't jump scroll while typing
@@ -3372,6 +3410,8 @@
       } else if (e.key === "Escape") {
         searchBox.value = "";
         if (searchClearBtn) searchClearBtn.style.display = "none";
+        const chId = currentChannel ? getChannelId(currentChannel) : "";
+        saveSearchQuery("", chId);
         prepareList(true);
         searchBox.blur();
         if (document.body.classList.contains("mode-max")) {
@@ -4268,6 +4308,14 @@
         setMode("large", false);
       }
     });
+
+    // Restore saved search query
+    const initialChId = currentChannel ? getChannelId(currentChannel) : "";
+    const savedSearch = getSavedSearchQuery(initialChId);
+    if (searchBox && savedSearch) {
+      searchBox.value = savedSearch;
+      if (searchClearBtn) searchClearBtn.style.display = "flex";
+    }
 
     // 1. Prepare list directly (automatically matches last watched video by ID, respecting order & filters)
     prepareList(true);
