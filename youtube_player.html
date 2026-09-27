@@ -305,18 +305,20 @@
       position: relative;
       background: #000;
       overflow: hidden;
+      padding: 16px 20px 24px 20px;
+      box-sizing: border-box;
     }
 
     .video-wrapper {
       width: 100%;
-      flex: 1 1 auto;
+      flex: 0 1 auto;
       min-height: 0;
-      max-width: calc((100vh - 84px) * (16 / 9));
+      max-width: calc((100vh - 160px) * (16 / 9));
       aspect-ratio: 16 / 9;
       background: #000;
       position: relative;
       overflow: hidden;
-      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.8);
+      box-shadow: 0 6px 32px rgba(0, 0, 0, 0.85);
       cursor: default;
     }
 
@@ -333,18 +335,18 @@
     /* Binge Toolbar (Dedicated bar below YouTube Player) */
     .binge-control-bar {
       width: 100%;
-      max-width: calc((100vh - 84px) * (16 / 9));
+      max-width: calc((100vh - 160px) * (16 / 9));
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      padding: 8px 18px;
-      margin-top: 16px;
-      margin-bottom: 10px;
+      padding: 9px 20px;
+      margin-top: 52px;
+      margin-bottom: 16px;
       background: #141414;
       border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+      border-radius: 14px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6);
       box-sizing: border-box;
       flex-shrink: 0;
       z-index: 10;
@@ -394,6 +396,7 @@
       width: 100vw !important;
       height: 100vh !important;
       position: relative;
+      padding: 0 !important;
     }
 
     body.mode-max .video-wrapper {
@@ -405,7 +408,7 @@
 
     body.mode-max .binge-control-bar {
       position: absolute;
-      bottom: 22px;
+      bottom: 84px;
       left: 50%;
       margin: 0;
       transform: translateX(-50%) translateY(0);
@@ -444,7 +447,7 @@
     .video-container:fullscreen .binge-control-bar,
     .video-container:-webkit-full-screen .binge-control-bar {
       position: absolute;
-      bottom: 24px;
+      bottom: 84px;
       left: 50%;
       margin: 0;
       transform: translateX(-50%) translateY(0);
