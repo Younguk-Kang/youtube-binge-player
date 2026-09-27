@@ -527,22 +527,6 @@
       display: none !important;
     }
 
-    /* Video Cursor Auto-Hide: naturally hide cursor across entire window when playing & idle */
-    body.video-cursor-idle,
-    body.video-cursor-idle *,
-    .video-wrapper.video-cursor-idle,
-    .video-wrapper.video-cursor-idle * {
-      cursor: none !important;
-    }
-
-    body.video-cursor-idle iframe,
-    body.video-cursor-idle #yt-iframe {
-      pointer-events: none !important;
-    }
-
-    .video-cursor-sensor {
-      display: none !important;
-    }
 
     /* Video Click Layer (Single click play/pause, Double click fullscreen) */
     .video-click-layer {
@@ -2310,8 +2294,6 @@
           <!-- Toast Message (Placed inside video-wrapper so it displays in fullscreen) -->
           <div class="toast-msg" id="toast-msg"></div>
           <div id="yt-iframe"></div>
-          <!-- Transparent motion & cursor sensor layer (hides cursor naturally when playing & idle) -->
-          <div class="video-cursor-sensor" id="video-cursor-sensor"></div>
 
           <!-- Error notice banner -->
           <div class="player-error-overlay" id="player-error-overlay">
@@ -3395,26 +3377,20 @@
             'onStateChange': function(event) {
               const state = event.data;
               if (state === 1 || (typeof YT !== "undefined" && YT.PlayerState && state === YT.PlayerState.PLAYING)) {
-                isVideoPlayingState = true;
                 if (typeof updatePlayPauseUI === "function") updatePlayPauseUI(true);
                 applyPreferredQuality();
                 updateQualityOptions();
                 applySubtitlesState();
                 setTimeout(applySubtitlesState, 500);
                 if (typeof showBingeBar === "function") showBingeBar(3000);
-                if (typeof scheduleCursorIdle === "function") scheduleCursorIdle(2000);
               }
 
               if (state === 2 || (typeof YT !== "undefined" && YT.PlayerState && state === YT.PlayerState.PAUSED)) {
-                isVideoPlayingState = false;
-                if (typeof wakeUpCursor === "function") wakeUpCursor();
                 if (typeof updatePlayPauseUI === "function") updatePlayPauseUI(false);
                 saveCurrentPlayingPosition();
                 if (typeof showBingeBar === "function") showBingeBar(0);
               }
               if (state === 0 || (typeof YT !== "undefined" && YT.PlayerState && state === YT.PlayerState.ENDED)) {
-                isVideoPlayingState = false;
-                if (typeof wakeUpCursor === "function") wakeUpCursor();
                 if (typeof updatePlayPauseUI === "function") updatePlayPauseUI(false);
                 if (typeof showBingeBar === "function") showBingeBar(4000);
                 let curVid = (currentIndex >= 0 && currentIndex < displayList.length) ? displayList[currentIndex] : null;
@@ -3758,7 +3734,7 @@
 
     // Global mousemove for edge detection in mode-max
     window.addEventListener("mousemove", (e) => {
-      if (window.innerWidth <= 768 || !document.body.classList.contains("mode-max") || document.body.classList.contains("video-cursor-idle")) return;
+      if (window.innerWidth <= 768 || !document.body.classList.contains("mode-max")) return;
 
       const winW = window.innerWidth;
       const winH = window.innerHeight;
@@ -4011,166 +3987,23 @@
       });
     }
 
-    // Auto-hide Cursor when Playing & Idle over the screen
-    let isVideoPlayingState = false;
-    let cursorIdleTimer = null;
-    let idleActivatedAt = 0;
-    let lastPointerX = -1;
-    let lastPointerY = -1;
-
-    function isVideoPlaying() {
-      if (isPlayerReady && player && typeof player.getPlayerState === "function") {
-        try {
-          const s = player.getPlayerState();
-          if (s === 1 || s === 3) return true;
-          if (typeof YT !== "undefined" && YT.PlayerState && (s === YT.PlayerState.PLAYING || s === YT.PlayerState.BUFFERING)) return true;
-          if (s === 0 || s === 2 || s === -1) return false;
-        } catch(e) {}
-      }
-      return !!isVideoPlayingState;
-    }
-
-    function wakeUpCursor() {
-      clearTimeout(cursorIdleTimer);
-
-      if (document.body.classList.contains("video-cursor-idle")) {
-        document.body.classList.remove("video-cursor-idle");
-      }
-      if (videoWrapper) {
-        if (videoWrapper.classList.contains("video-cursor-idle")) {
-          videoWrapper.classList.remove("video-cursor-idle");
-        }
-        if (videoWrapper.classList.contains("idle")) {
-          videoWrapper.classList.remove("idle");
-        }
-      }
+    function wakeOverlay() {
       if (typeof showBingeBar === "function" && document.body.classList.contains("mode-max")) {
         showBingeBar(3000);
       }
     }
 
-    function scheduleCursorIdle(delay = 2000) {
-      clearTimeout(cursorIdleTimer);
-      if (!isVideoPlaying()) {
-        wakeUpCursor();
-        return;
-      }
-
-      cursorIdleTimer = setTimeout(() => {
-        if (!isVideoPlaying()) {
-          wakeUpCursor();
-          return;
-        }
-        const modal = document.getElementById("channel-modal");
-        if (modal && modal.style.display === "flex") return;
-
-        idleActivatedAt = Date.now();
-        document.body.classList.add("video-cursor-idle");
-        if (videoWrapper) {
-          videoWrapper.classList.add("video-cursor-idle");
-          videoWrapper.classList.add("idle");
-        }
-        if (typeof hideBingeBar === "function") {
-          hideBingeBar();
-        }
-      }, delay);
-    }
-
-    function wakeOverlay() {
-      wakeUpCursor();
-      if (isVideoPlaying()) {
-        scheduleCursorIdle(2000);
+    function scheduleOverlayHide(delay = 2500) {
+      if (typeof showBingeBar === "function" && document.body.classList.contains("mode-max")) {
+        showBingeBar(delay);
       }
     }
-
-    function handlePointerMove(e) {
-      if (!e) return;
-
-      const curX = (typeof e.clientX === "number") ? e.clientX : lastPointerX;
-      const curY = (typeof e.clientY === "number") ? e.clientY : lastPointerY;
-
-      if (document.body.classList.contains("video-cursor-idle")) {
-        const elapsed = Date.now() - idleActivatedAt;
-
-        // 1. Synthetic hit-test events fired within 180ms of entering idle are ignored
-        if (elapsed < 180) {
-          lastPointerX = curX;
-          lastPointerY = curY;
-          return;
-        }
-
-        // 2. Filter out micro-jitter / subpixel movements (< 4px)
-        if (lastPointerX >= 0 && lastPointerY >= 0) {
-          const dx = Math.abs(curX - lastPointerX);
-          const dy = Math.abs(curY - lastPointerY);
-          if (dx < 4 && dy < 4) {
-            return;
-          }
-        }
-      } else {
-        // When already awake, avoid redundant wakeups if coordinates haven't changed
-        if (curX === lastPointerX && curY === lastPointerY) {
-          return;
-        }
-      }
-
-      // Real intentional movement: Update last coordinates
-      lastPointerX = curX;
-      lastPointerY = curY;
-
-      // Wake up cursor immediately
-      wakeUpCursor();
-
-      // If playing, schedule auto-hide after 2.0s of inactivity
-      if (isVideoPlaying()) {
-        scheduleCursorIdle(2000);
-      }
-    }
-
-    // Single unified mousemove listener across the window (prevents double-dispatch)
-    window.addEventListener("mousemove", handlePointerMove, { passive: true });
-
-    window.addEventListener("mousedown", (e) => {
-      lastPointerX = e.clientX;
-      lastPointerY = e.clientY;
-      wakeUpCursor();
-      if (isVideoPlaying()) {
-        scheduleCursorIdle(2000);
-      }
-    }, { passive: true });
-
-    window.addEventListener("touchstart", () => {
-      wakeUpCursor();
-      if (isVideoPlaying()) {
-        scheduleCursorIdle(2000);
-      }
-    }, { passive: true });
-
-    window.addEventListener("keydown", () => {
-      wakeUpCursor();
-      if (isVideoPlaying()) {
-        scheduleCursorIdle(2000);
-      }
-    });
 
     if (videoWrapper) {
-      videoWrapper.addEventListener("click", () => {
-        // Direct click on video wrapper area toggles play/pause
-        togglePlayPause();
-      });
       videoWrapper.addEventListener("dblclick", () => {
         toggleFullscreen();
       });
     }
-
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden) {
-        clearTimeout(cursorIdleTimer);
-        wakeUpCursor();
-      } else if (isVideoPlaying()) {
-        scheduleCursorIdle(2000);
-      }
-    });
 
     // Progress Bar Scrubber Update Loop & Periodic Position Saver
     let lastTimeStr = "";
