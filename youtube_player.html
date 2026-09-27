@@ -311,7 +311,7 @@
       width: 100%;
       flex: 1 1 auto;
       min-height: 0;
-      max-width: calc((100vh - 48px) * (16 / 9));
+      max-width: calc((100vh - 84px) * (16 / 9));
       aspect-ratio: 16 / 9;
       background: #000;
       position: relative;
@@ -333,18 +333,22 @@
     /* Binge Toolbar (Dedicated bar below YouTube Player) */
     .binge-control-bar {
       width: 100%;
-      max-width: calc((100vh - 48px) * (16 / 9));
+      max-width: calc((100vh - 84px) * (16 / 9));
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      padding: 7px 16px;
-      background: #121212;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 8px 18px;
+      margin-top: 16px;
+      margin-bottom: 10px;
+      background: #141414;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
       box-sizing: border-box;
       flex-shrink: 0;
       z-index: 10;
-      transition: background 0.2s ease, border-color 0.2s ease;
+      transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     }
 
     .bcb-group {
@@ -403,6 +407,7 @@
       position: absolute;
       bottom: 22px;
       left: 50%;
+      margin: 0;
       transform: translateX(-50%) translateY(0);
       width: auto;
       min-width: 320px;
@@ -441,6 +446,7 @@
       position: absolute;
       bottom: 24px;
       left: 50%;
+      margin: 0;
       transform: translateX(-50%) translateY(0);
       width: auto;
       min-width: 320px;
@@ -535,14 +541,16 @@
       align-items: center;
       justify-content: center;
       pointer-events: auto;
-      /* Precisely cut out bottom bar (56px) and bottom-right settings/quality popup (320px x 350px) */
+      /* Unblock top-right menus (Watch Later, Share ~240px x 68px), bottom playback scrubber bar (90px), and settings popup (320px x 350px) */
       clip-path: polygon(
         0 0,
-        100% 0,
+        calc(100% - min(240px, 45%)) 0,
+        calc(100% - min(240px, 45%)) 68px,
+        100% 68px,
         100% calc(100% - min(350px, 65%)),
         calc(100% - min(320px, 45%)) calc(100% - min(350px, 65%)),
-        calc(100% - min(320px, 45%)) calc(100% - 56px),
-        0 calc(100% - 56px)
+        calc(100% - min(320px, 45%)) calc(100% - 90px),
+        0 calc(100% - 90px)
       );
     }
 
@@ -1656,6 +1664,7 @@
       .binge-control-bar {
         position: static !important;
         transform: none !important;
+        margin: 0 !important;
         max-width: 100% !important;
         opacity: 1 !important;
         visibility: visible !important;
@@ -3459,6 +3468,7 @@
         isBingeBarHovered = true;
         clearTimeout(bingeBarHideTimer);
         showBingeBar(0);
+        if (typeof wakeUpCursor === "function") wakeUpCursor();
       });
       bingeControlBar.addEventListener("mouseleave", () => {
         isBingeBarHovered = false;
