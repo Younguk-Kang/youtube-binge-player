@@ -540,12 +540,9 @@
       cursor: default;
     }
 
-    /* When video is playing and mouse is idle: Naturally hide cursor over player, video, and screen */
+    /* When video is playing and mouse is idle: Naturally hide cursor across the ENTIRE viewport and screen */
     body.video-cursor-idle,
-    body.video-cursor-idle .player-section,
-    body.video-cursor-idle .video-container,
-    body.video-cursor-idle .video-wrapper,
-    body.video-cursor-idle .video-wrapper *,
+    body.video-cursor-idle *,
     .video-wrapper.video-cursor-idle,
     .video-wrapper.video-cursor-idle * {
       cursor: none !important;
@@ -553,20 +550,18 @@
 
     body.video-cursor-idle .video-cursor-sensor,
     .video-wrapper.video-cursor-idle .video-cursor-sensor {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      height: 100dvh !important;
+      z-index: 9999999 !important;
       pointer-events: auto !important;
       cursor: none !important;
-    }
-
-    /* Always keep cursor visible on sidebar playlist, header, binge bar, and dialogs */
-    body.video-cursor-idle .list-section,
-    body.video-cursor-idle .list-section *,
-    body.video-cursor-idle .header-bar,
-    body.video-cursor-idle .header-bar *,
-    body.video-cursor-idle .binge-control-bar,
-    body.video-cursor-idle .binge-control-bar *,
-    body.video-cursor-idle .modal-box,
-    body.video-cursor-idle .modal-box * {
-      cursor: default !important;
+      display: block !important;
     }
 
     /* Video Click Layer (Single click play/pause, Double click fullscreen) */
@@ -1970,9 +1965,6 @@
         padding: 0 10px !important;
         font-size: 12px !important;
         border-radius: 16px !important;
-      }
-      .video-cursor-sensor {
-        display: none !important;
       }
       .yt-switch-wrap {
         gap: 5px !important;
@@ -3421,7 +3413,8 @@
               updateQualityOptions();
             },
             'onStateChange': function(event) {
-              if (event.data === YT.PlayerState.PLAYING) {
+              const state = event.data;
+              if (state === 1 || (typeof YT !== "undefined" && YT.PlayerState && state === YT.PlayerState.PLAYING)) {
                 isVideoPlayingState = true;
                 if (typeof updatePlayPauseUI === "function") updatePlayPauseUI(true);
                 applyPreferredQuality();
@@ -3429,17 +3422,17 @@
                 applySubtitlesState();
                 setTimeout(applySubtitlesState, 500);
                 if (typeof showBingeBar === "function") showBingeBar(3000);
-                if (typeof scheduleCursorIdle === "function") scheduleCursorIdle(2500);
+                if (typeof scheduleCursorIdle === "function") scheduleCursorIdle(2000);
               }
 
-              if (event.data === YT.PlayerState.PAUSED) {
+              if (state === 2 || (typeof YT !== "undefined" && YT.PlayerState && state === YT.PlayerState.PAUSED)) {
                 isVideoPlayingState = false;
                 if (typeof wakeUpCursor === "function") wakeUpCursor();
                 if (typeof updatePlayPauseUI === "function") updatePlayPauseUI(false);
                 saveCurrentPlayingPosition();
                 if (typeof showBingeBar === "function") showBingeBar(0);
               }
-              if (event.data === YT.PlayerState.ENDED) {
+              if (state === 0 || (typeof YT !== "undefined" && YT.PlayerState && state === YT.PlayerState.ENDED)) {
                 isVideoPlayingState = false;
                 if (typeof wakeUpCursor === "function") wakeUpCursor();
                 if (typeof updatePlayPauseUI === "function") updatePlayPauseUI(false);
@@ -4051,10 +4044,12 @@
       if (isPlayerReady && player && typeof player.getPlayerState === "function") {
         try {
           const s = player.getPlayerState();
-          return (s === YT.PlayerState.PLAYING);
+          if (s === 1 || s === 3) return true;
+          if (typeof YT !== "undefined" && YT.PlayerState && (s === YT.PlayerState.PLAYING || s === YT.PlayerState.BUFFERING)) return true;
+          if (s === 0 || s === 2 || s === -1) return false;
         } catch(e) {}
       }
-      return isVideoPlayingState;
+      return !!isVideoPlayingState;
     }
 
     function wakeUpCursor() {
@@ -4078,7 +4073,7 @@
       }
     }
 
-    function scheduleCursorIdle(delay = 2500) {
+    function scheduleCursorIdle(delay = 2000) {
       clearTimeout(cursorIdleTimer);
       if (!isVideoPlaying()) {
         wakeUpCursor();
@@ -4090,9 +4085,6 @@
           wakeUpCursor();
           return;
         }
-        // Don't hide cursor if sidebar is hovered or modal is open or binge bar is hovered
-        if (isSidebarHovered) return;
-        if (isBingeBarHovered) return;
         const modal = document.getElementById("channel-modal");
         if (modal && modal.style.display === "flex") return;
 
@@ -4118,7 +4110,7 @@
     function wakeOverlay() {
       wakeUpCursor();
       if (isVideoPlaying()) {
-        scheduleCursorIdle(2500);
+        scheduleCursorIdle(2000);
       }
     }
 
@@ -4144,10 +4136,10 @@
           return;
         }
 
-        // Only wake up if the mouse has physically moved by at least 4 pixels
+        // Only wake up if the mouse has physically moved by at least 3 pixels
         const dx = Math.abs(curX - lastPointerX);
         const dy = Math.abs(curY - lastPointerY);
-        if (dx < 4 && dy < 4) {
+        if (dx < 3 && dy < 3) {
           return;
         }
       } else {
@@ -4164,20 +4156,20 @@
       // Wake up cursor immediately
       wakeUpCursor();
 
-      // If playing, schedule auto-hide after 2.5s of inactivity
+      // If playing, schedule auto-hide after 2.0s of inactivity
       if (isVideoPlaying()) {
-        scheduleCursorIdle(2500);
+        scheduleCursorIdle(2000);
       }
     }
 
-    // Global pointermove / mousemove & keydown detection
+    // Global pointermove / mousemove & keydown detection across the entire window
     window.addEventListener("pointermove", handlePointerMove, { passive: true });
     window.addEventListener("mousemove", handlePointerMove, { passive: true });
 
     window.addEventListener("keydown", () => {
       wakeUpCursor();
       if (isVideoPlaying()) {
-        scheduleCursorIdle(2500);
+        scheduleCursorIdle(2000);
       }
     });
 
@@ -4195,56 +4187,12 @@
       });
     }
 
-    if (videoWrapper) {
-      videoWrapper.addEventListener("mouseenter", (e) => {
-        handlePointerMove(e);
-      });
-
-      videoWrapper.addEventListener("mouseleave", () => {
-        clearTimeout(cursorIdleTimer);
-        wakeUpCursor();
-      });
-    }
-
-    if (sidebar) {
-      sidebar.addEventListener("mouseenter", () => {
-        isSidebarHovered = true;
-        wakeUpCursor();
-        clearTimeout(cursorIdleTimer);
-      });
-      sidebar.addEventListener("mousemove", () => {
-        isSidebarHovered = true;
-        wakeUpCursor();
-        clearTimeout(cursorIdleTimer);
-      });
-      sidebar.addEventListener("mouseleave", () => {
-        isSidebarHovered = false;
-        if (isVideoPlaying()) {
-          scheduleCursorIdle(2500);
-        }
-      });
-    }
-
-    if (bingeControlBar) {
-      bingeControlBar.addEventListener("mouseenter", () => {
-        isBingeBarHovered = true;
-        wakeUpCursor();
-        clearTimeout(cursorIdleTimer);
-      });
-      bingeControlBar.addEventListener("mouseleave", () => {
-        isBingeBarHovered = false;
-        if (isVideoPlaying()) {
-          scheduleCursorIdle(2500);
-        }
-      });
-    }
-
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
         clearTimeout(cursorIdleTimer);
         wakeUpCursor();
       } else if (isVideoPlaying()) {
-        scheduleCursorIdle(2500);
+        scheduleCursorIdle(2000);
       }
     });
 
