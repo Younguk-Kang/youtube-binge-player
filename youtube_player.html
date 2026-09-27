@@ -534,7 +534,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      z-index: 6;
+      z-index: 10;
       background: transparent;
       pointer-events: none;
       cursor: default;
@@ -545,20 +545,27 @@
     body.video-cursor-idle .player-section,
     body.video-cursor-idle .video-container,
     body.video-cursor-idle .video-wrapper,
-    body.video-cursor-idle .video-wrapper * {
+    body.video-cursor-idle .video-wrapper *,
+    .video-wrapper.video-cursor-idle,
+    .video-wrapper.video-cursor-idle * {
       cursor: none !important;
     }
 
-    body.video-cursor-idle .video-cursor-sensor {
+    body.video-cursor-idle .video-cursor-sensor,
+    .video-wrapper.video-cursor-idle .video-cursor-sensor {
       pointer-events: auto !important;
       cursor: none !important;
     }
 
-    /* Always keep cursor visible on sidebar playlist, header, and dialogs */
-    body.video-cursor-idle .list-section,
-    body.video-cursor-idle .list-section *,
-    body.video-cursor-idle .modal-box,
-    body.video-cursor-idle .modal-box * {
+    /* Always keep cursor visible on sidebar playlist, header, binge bar, and dialogs */
+    .list-section,
+    .list-section *,
+    .header-bar,
+    .header-bar *,
+    .binge-control-bar,
+    .binge-control-bar *,
+    .modal-box,
+    .modal-box * {
       cursor: default !important;
     }
 
@@ -4034,6 +4041,9 @@
     const cursorSensor = document.getElementById("video-cursor-sensor");
     let isVideoPlayingState = false;
     let cursorIdleTimer = null;
+    let idleActivatedAt = 0;
+    let lastPointerX = -1;
+    let lastPointerY = -1;
 
     function isVideoPlaying() {
       if (isPlayerReady && player && typeof player.getPlayerState === "function") {
@@ -4047,11 +4057,20 @@
 
     function wakeUpCursor() {
       clearTimeout(cursorIdleTimer);
+      idleActivatedAt = 0;
       if (document.body.classList.contains("video-cursor-idle")) {
         document.body.classList.remove("video-cursor-idle");
       }
-      if (videoWrapper && videoWrapper.classList.contains("idle")) {
-        videoWrapper.classList.remove("idle");
+      if (videoWrapper) {
+        if (videoWrapper.classList.contains("video-cursor-idle")) {
+          videoWrapper.classList.remove("video-cursor-idle");
+        }
+        if (videoWrapper.classList.contains("idle")) {
+          videoWrapper.classList.remove("idle");
+        }
+      }
+      if (typeof showBingeBar === "function" && document.body.classList.contains("mode-max")) {
+        showBingeBar(3000);
       }
     }
 
@@ -4073,8 +4092,15 @@
         if (modal && modal.style.display === "flex") return;
         if (bingeControlBar && bingeControlBar.matches(":hover")) return;
 
+        idleActivatedAt = Date.now();
         document.body.classList.add("video-cursor-idle");
-        if (videoWrapper) videoWrapper.classList.add("idle");
+        if (videoWrapper) {
+          videoWrapper.classList.add("video-cursor-idle");
+          videoWrapper.classList.add("idle");
+        }
+        if (typeof hideBingeBar === "function") {
+          hideBingeBar();
+        }
       }, delay);
     }
 
@@ -4085,25 +4111,57 @@
       }
     }
 
-    let lastMouseMoveTime = 0;
-    function handleMouseMove() {
-      const now = Date.now();
-      if (now - lastMouseMoveTime > 50) {
-        lastMouseMoveTime = now;
-        wakeUpCursor();
-        if (isVideoPlaying()) {
-          scheduleCursorIdle(2500);
+    function handlePointerMove(e) {
+      if (!e) return;
+
+      const curX = e.clientX;
+      const curY = e.clientY;
+      const movementX = (typeof e.movementX === "number") ? e.movementX : 0;
+      const movementY = (typeof e.movementY === "number") ? e.movementY : 0;
+
+      const isIdle = document.body.classList.contains("video-cursor-idle");
+      if (isIdle) {
+        const timeSinceIdle = Date.now() - idleActivatedAt;
+
+        // Check if this is a synthetic browser event fired upon pointer-events transition
+        const isSynthetic = (movementX === 0 && movementY === 0) || (timeSinceIdle < 120 && Math.abs(curX - lastPointerX) < 3 && Math.abs(curY - lastPointerY) < 3);
+
+        if (isSynthetic) {
+          // Synchronize coordinates to the true position and ignore synthetic event!
+          lastPointerX = curX;
+          lastPointerY = curY;
+          return;
+        }
+
+        // Real movement detected while idle!
+        const dx = Math.abs(curX - lastPointerX);
+        const dy = Math.abs(curY - lastPointerY);
+        if (dx < 2 && dy < 2 && movementX === 0 && movementY === 0) {
+          return;
+        }
+      } else {
+        // When already awake, avoid redundant wakeups if coordinates haven't changed
+        if (curX === lastPointerX && curY === lastPointerY && movementX === 0 && movementY === 0) {
+          return;
         }
       }
-    }
 
-    // Global mousemove & keydown detection across the window
-    window.addEventListener("mousemove", (e) => {
+      // Real movement: Update last coordinates
+      lastPointerX = curX;
+      lastPointerY = curY;
+
+      // Wake up cursor immediately
       wakeUpCursor();
+
+      // If playing, schedule auto-hide after 2.5s of inactivity
       if (isVideoPlaying()) {
         scheduleCursorIdle(2500);
       }
-    });
+    }
+
+    // Global pointermove / mousemove & keydown detection
+    window.addEventListener("pointermove", handlePointerMove, { passive: true });
+    window.addEventListener("mousemove", handlePointerMove, { passive: true });
 
     window.addEventListener("keydown", () => {
       wakeUpCursor();
@@ -4113,12 +4171,8 @@
     });
 
     if (cursorSensor) {
-      cursorSensor.addEventListener("mousemove", () => {
-        wakeUpCursor();
-        if (isVideoPlaying()) {
-          scheduleCursorIdle(2500);
-        }
-      });
+      cursorSensor.addEventListener("pointermove", handlePointerMove, { passive: true });
+      cursorSensor.addEventListener("mousemove", handlePointerMove, { passive: true });
 
       cursorSensor.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -4134,18 +4188,52 @@
     }
 
     if (videoWrapper) {
-      videoWrapper.addEventListener("mouseenter", () => {
-        wakeUpCursor();
-        if (isVideoPlaying()) scheduleCursorIdle(2500);
+      videoWrapper.addEventListener("mouseenter", (e) => {
+        handlePointerMove(e);
       });
-
-      videoWrapper.addEventListener("mousemove", handleMouseMove);
 
       videoWrapper.addEventListener("mouseleave", () => {
         clearTimeout(cursorIdleTimer);
         wakeUpCursor();
       });
     }
+
+    if (sidebar) {
+      sidebar.addEventListener("mouseenter", () => {
+        wakeUpCursor();
+        clearTimeout(cursorIdleTimer);
+      });
+      sidebar.addEventListener("mousemove", () => {
+        wakeUpCursor();
+        clearTimeout(cursorIdleTimer);
+      });
+      sidebar.addEventListener("mouseleave", () => {
+        if (isVideoPlaying()) {
+          scheduleCursorIdle(2500);
+        }
+      });
+    }
+
+    if (bingeControlBar) {
+      bingeControlBar.addEventListener("mouseenter", () => {
+        wakeUpCursor();
+        clearTimeout(cursorIdleTimer);
+      });
+      bingeControlBar.addEventListener("mouseleave", () => {
+        if (isVideoPlaying()) {
+          scheduleCursorIdle(2500);
+        }
+      });
+    }
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        clearTimeout(cursorIdleTimer);
+        wakeUpCursor();
+      } else if (isVideoPlaying()) {
+        scheduleCursorIdle(2500);
+      }
+    });
 
     // Progress Bar Scrubber Update Loop & Periodic Position Saver
     let lastTimeStr = "";
