@@ -528,31 +528,34 @@
       top: 0;
       left: 0;
       width: 100%;
-      height: calc(100% - 60px);
+      height: 100%;
       z-index: 5;
       cursor: default;
       display: flex;
       align-items: center;
       justify-content: center;
       pointer-events: auto;
-      transition: height 0.12s ease;
+      /* Precisely cut out bottom bar (56px) and bottom-right settings/quality popup (320px x 350px) */
+      clip-path: polygon(
+        0 0,
+        100% 0,
+        100% calc(100% - min(350px, 65%)),
+        calc(100% - min(320px, 45%)) calc(100% - min(350px, 65%)),
+        calc(100% - min(320px, 45%)) calc(100% - 56px),
+        0 calc(100% - 56px)
+      );
     }
 
-    /* Idle / Inactivity: Expand to 100% and completely hide cursor */
+    /* Idle / Inactivity: Expand to 100% and completely hide cursor across entire video */
     .video-wrapper.cursor-idle,
     .video-wrapper.cursor-idle * {
       cursor: none !important;
     }
 
     .video-wrapper.cursor-idle .video-click-layer {
-      height: 100% !important;
+      clip-path: none !important;
       cursor: none !important;
       pointer-events: auto !important;
-    }
-
-    /* While user hovers/interacts with bottom controls & gear popup */
-    .video-wrapper.using-controls .video-click-layer {
-      pointer-events: none !important;
     }
 
     /* Center play/pause feedback badge */
@@ -3653,8 +3656,6 @@
     const playBadge = document.getElementById("center-play-badge");
 
     let cursorIdleTimer = null;
-    let controlsTimer = null;
-    let isUsingControls = false;
 
     function isVideoPlaying() {
       if (isPlayerReady && player && typeof player.getPlayerState === "function") {
@@ -3704,22 +3705,6 @@
       }, delay);
     }
 
-    function enterControlsMode() {
-      isUsingControls = true;
-      if (videoWrapper) videoWrapper.classList.add("using-controls");
-      clearTimeout(controlsTimer);
-      controlsTimer = setTimeout(() => {
-        exitControlsMode();
-      }, 5000);
-    }
-
-    function exitControlsMode() {
-      isUsingControls = false;
-      clearTimeout(controlsTimer);
-      if (videoWrapper) videoWrapper.classList.remove("using-controls");
-      if (isVideoPlaying()) scheduleCursorIdle(2500);
-    }
-
     function wakeOverlay() {
       wakeUpCursor();
       if (isVideoPlaying()) scheduleCursorIdle(2500);
@@ -3748,27 +3733,14 @@
     }
 
     if (clickLayer) {
-      clickLayer.addEventListener("mousemove", (e) => {
+      clickLayer.addEventListener("mousemove", () => {
         wakeUpCursor();
         scheduleCursorIdle(2500);
-
-        if (isUsingControls) {
-          const rect = clickLayer.getBoundingClientRect();
-          if (e.clientY < rect.bottom - 70) {
-            exitControlsMode();
-          }
-        }
       });
 
-      clickLayer.addEventListener("mouseleave", (e) => {
-        const rect = clickLayer.getBoundingClientRect();
-        // If mouse moved down into the YouTube bottom controls bar
-        if (e.clientY >= rect.bottom - 10) {
-          enterControlsMode();
-        } else {
-          clearTimeout(cursorIdleTimer);
-          wakeUpCursor();
-        }
+      clickLayer.addEventListener("mouseleave", () => {
+        clearTimeout(cursorIdleTimer);
+        wakeUpCursor();
       });
 
       clickLayer.addEventListener("click", () => {
@@ -3786,7 +3758,6 @@
       videoWrapper.addEventListener("mouseleave", () => {
         clearTimeout(cursorIdleTimer);
         wakeUpCursor();
-        exitControlsMode();
       });
     }
 
